@@ -150,11 +150,14 @@ Issue・PRのURLと、実際のマージ状況。
 
 ## このプロジェクトの運用情報
 
-- 対象: `C:\くそげー制作`（ローカルGitリポジトリ。2026-10-26 に `git init` で新規作成）
+- 対象: `C:\くそげー制作`（2026-10-26 に `git init` で新規作成）
 - 基準ブランチ: `main`
-- remote / GitHub: 未設定（gh は認証済みだが、GitHubリポジトリは未作成。作成・公開範囲の決定はユーザー確認事項）
-- そのためPR・CIは現時点で存在しない。GitHub設定までは、作業ブランチで実装・ローカル検証し、PMがローカルで `main` へ統合する（「CIなし・PRなし」と明記して報告）。
-- 技術構成: 各ゲームはビルド不要の静的HTML/JS。`games/<ゲーム名>/index.html` に配置。
+- remote / GitHub: `origin` = https://github.com/takatoshimizu/nomige （public。2026-10-26 にユーザーの「リリースまで」依頼を受けて作成）
+- CI: なし。必須レビュー・ブランチ保護: なし。マージ方式: squash。
+- 変更は作業ブランチ → PR → squashマージで main へ統合する。
+- デプロイ: GitHub Pages（main ブランチのルートを配信、mainへのマージで自動反映）。公開URL: https://takatoshimizu.github.io/nomige/
+- 公開リポジトリなので、実在社員の写真・個人情報・秘密情報をcommitしない（FIBEダービーの写真はブラウザ内読込のみ）。
+- 技術構成: ビルド不要の静的HTML/JS。トップ `index.html` がゲーム一覧、一覧データは `assets/games.js`、共通スタイルは `assets/common.css`。各ゲームは `games/<ゲーム名>/index.html`。
 - 起動方法: 対象の `index.html` をブラウザで直接開く。Claudeのプレビューでは `.claude/launch.json` の `static`（npx http-server、ポート8765）を使い `http://localhost:8765/games/<ゲーム名>/` を開く（data: スナップショットでは隣接JSが読めないため）。
 - 検証方法: ブラウザで表示し主要操作を確認（自動テスト・CIなし）。スマホ幅（375px）も確認する。
 - デプロイ: なし（公開先未設定。初めての一般公開はユーザー確認事項）

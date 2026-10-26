@@ -1,8 +1,8 @@
-# くそげー制作
+# のみゲー！
 
-ブラウザで遊べる小さなゲーム集。ビルド不要で、各ゲームの `index.html` をブラウザで開けば遊べます。
+飲み会ですぐ遊べるブラウザゲーム集。スマホ1台、登録もアプリも不要。
 
-## ゲーム一覧
+**遊ぶ: https://takatoshimizu.github.io/nomige/**
 
-- [FIBEダービー](games/fibe-derby/index.html) — 社員の顔をした馬が走るレース。勝つ社員を予想してコインを賭ける。
-  - 顔写真の差し替え方法は [games/fibe-derby/faces/README.md](games/fibe-derby/faces/README.md) を参照。
+ビルド不要の静的サイトです。ローカルではトップの `index.html` をブラウザで開けば遊べます。
+ゲームの一覧は [assets/games.js](assets/games.js)、各ゲームは `games/<ゲーム名>/index.html` にあります。
