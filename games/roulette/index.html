@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>指名ルーレット｜のみゲー！</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="stylesheet" href="../../assets/common.css">
+<style>
+  .label { color: var(--sub); font-size: .85rem; font-weight: 700; }
+  .wheel-wrap { width: 100%; max-width: 420px; margin: 0 auto; }
+  .wheel-wrap canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; touch-action: manipulation; }
+  textarea.field { min-height: 9.5em; resize: vertical; line-height: 1.5; }
+  .count { font-size: .85rem; color: var(--sub); }
+  .count.bad { color: var(--danger); font-weight: 700; }
+  .opt { display: flex; align-items: center; gap: 8px; font-weight: 700; cursor: pointer; }
+  .opt input { width: 20px; height: 20px; accent-color: var(--accent); }
+  .used { display: flex; flex-wrap: wrap; gap: 6px; }
+  .used .chip { text-decoration: line-through; }
+  .result {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(circle, #5a2fa0 0, #2a1660 45%, #0d0820 100%);
+    animation: pop .35s ease-out;
+  }
+  .result .lead { margin: 0; font-weight: 700; color: var(--sub); }
+  .result h2 {
+    font-size: clamp(2.2rem, 13vw, 4.5rem); line-height: 1.2; margin: 8px 0 20px; color: var(--accent);
+    text-shadow: 0 4px 0 #0006; overflow-wrap: anywhere; max-width: 92vw;
+  }
+  @keyframes pop { 0% { transform: scale(.7); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+</style>
+</head>
+<body>
+<header class="g-header">
+  <a class="back" href="../../">← 一覧</a>
+  <h1>🎯 指名ルーレット</h1>
+  <button class="btn small" id="soundBtn" aria-pressed="true">🔊 音あり</button>
+</header>
+
+<main class="g-main stack">
+  <div class="wheel-wrap"><canvas id="wheel" aria-label="ルーレット"></canvas></div>
+  <button class="btn big primary" id="spinBtn">回す！ 🎯</button>
+
+  <div class="card stack">
+    <label class="opt"><input type="checkbox" id="excludeChk"> 当たった項目は次から除外</label>
+    <div id="usedBox" class="stack hidden">
+      <span class="label">除外中</span>
+      <div class="used" id="usedList"></div>
+      <div><button class="btn small" id="resetUsedBtn">除外をリセット</button></div>
+    </div>
+  </div>
+
+  <div class="card stack">
+    <span class="label">項目（1行に1つ・2〜20個）</span>
+    <textarea class="field" id="itemsInput" placeholder="たなか&#10;すずき&#10;さとう"></textarea>
+    <div class="count" id="count"></div>
+    <span class="label">プリセット</span>
+    <div class="row" id="presets"></div>
+  </div>
+
+  <div class="card note">
+    <b>遊び方</b><br>
+    参加者の名前や、罰ゲーム・次のお店の候補などを入力して「回す！」。針が止まった項目が当たりです。
+    「除外」をオンにすると、全員に1回ずつ順番を回せます。
+  </div>
+</main>
+
+<div class="result hidden" id="result" role="alertdialog" aria-labelledby="resultName">
+  <div>
+    <p class="lead">決定！</p>
+    <h2 id="resultName"></h2>
+    <div class="row" style="justify-content:center">
+      <button class="btn primary" id="againBtn">もう一回</button>
+      <button class="btn" id="closeBtn">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const PRESETS = [
+    { name: '罰ゲーム（健全）', items: [
+      '好きな食べ物を3つ発表', '右隣の人のいいところを褒める', '一発ギャグ', '最近あった小さな幸せを話す',
+      '次の乾杯の音頭をとる', '変顔で写真を1枚', '子どもの頃の夢を発表', 'モノマネを1つ',
+    ] },
+    { name: '次の一杯', items: [
+      'ビール', 'ハイボール', 'レモンサワー', 'ウーロン茶', 'ジンジャーエール', '日本酒', 'ワイン', 'お水',
+    ] },
+    { name: '話す人を決める', items: [
+      '一番若い人', '一番年上の人', '今日一番遅く来た人', '誕生日が一番近い人', '幹事', '左端の人', '右端の人', 'グラスが一番空いている人',
+    ] },
+  ];
+  const COLORS = ['#ffcc33', '#ff5c8a', '#3ee0d0', '#5ce07a', '#a98bff', '#ff9a3c', '#4fa8ff', '#ff7ad9', '#c6e85a', '#ff6b6b'];
+  const MIN = 2, MAX = 20;
+  const KEY = 'nomige-roulette';
+  const TAU = Math.PI * 2;
+
+  const $ = s => document.querySelector(s);
+  const canvas = $('#wheel');
+  const g = canvas.getContext('2d');
+  let items = [];
+  let used = [];
+  let exclude = false;
+  let sound = true;
+  let rot = 0;
+  let spinning = false;
+  let ctx = null;
+
+  try { sound = localStorage.getItem('nomige-sound') !== 'off'; } catch (e) { sound = true; }
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved) { items = saved.items || []; used = saved.used || []; exclude = !!saved.exclude; }
+  } catch (e) { /* 読めなければ初期値 */ }
+  if (!items.length) items = PRESETS[2].items.slice();
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ items, used, exclude })); } catch (e) { /* 保存不可でも動く */ }
+  }
+
+  function parse(text) {
+    const out = [];
+    text.split('\n').forEach(l => {
+      const s = l.trim();
+      if (s && !out.includes(s)) out.push(s);
+    });
+    return out.slice(0, MAX);
+  }
+
+  // ルーレットに載る項目（除外モードなら当たり済みを除く）
+  const active = () => exclude ? items.filter(s => !used.includes(s)) : items;
+
+  // ---------- 描画 ----------
+  function resize() {
+    const w = canvas.parentElement.clientWidth;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(w * dpr);
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function fitText(text, maxW) {
+    if (g.measureText(text).width <= maxW) return text;
+    let s = text;
+    while (s.length > 1 && g.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+    return s + '…';
+  }
+
+  function draw() {
+    const size = canvas.width / (window.devicePixelRatio || 1);
+    const cx = size / 2, cy = size / 2 + 6;
+    const r = size / 2 - 12;
+    const list = active();
+    const n = list.length;
+    g.clearRect(0, 0, size, size);
+
+    // 外枠
+    g.beginPath(); g.arc(cx, cy, r + 6, 0, TAU); g.fillStyle = '#0d0820'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = '#3d3570'; g.stroke();
+
+    if (!n) {
+      g.fillStyle = '#b7afd9'; g.font = `700 ${Math.max(14, size / 22)}px sans-serif`;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('項目がありません', cx, cy);
+    } else {
+      const seg = TAU / n;
+      const fs = Math.max(11, Math.min(size / 20, seg * r * 0.36, 24));
+      g.font = `800 ${fs}px "Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif`;
+      for (let i = 0; i < n; i++) {
+        // 12時の位置を起点に時計回り
+        const a0 = rot + i * seg - Math.PI / 2;
+        let color = COLORS[i % COLORS.length];
+        if (i === n - 1 && n > 1 && i % COLORS.length === 0) color = COLORS[1]; // 先頭と同色が隣り合わないように
+        g.beginPath(); g.moveTo(cx, cy); g.arc(cx, cy, r, a0, a0 + seg); g.closePath();
+        g.fillStyle = color; g.fill();
+        if (n > 1) { g.lineWidth = 2; g.strokeStyle = '#15122b'; g.stroke(); }
+
+        // 左半分は文字が逆さにならないよう反転して描く
+        const mid = a0 + seg / 2;
+        const flip = Math.cos(mid) < 0;
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(flip ? mid + Math.PI : mid);
+        g.fillStyle = '#1b1240';
+        g.textAlign = flip ? 'left' : 'right'; g.textBaseline = 'middle';
+        g.fillText(fitText(list[i], r * 0.7), flip ? -(r - 10) : r - 10, 0);
+        g.restore();
+      }
+    }
+
+    // 中心
+    g.beginPath(); g.arc(cx, cy, Math.max(14, r * 0.12), 0, TAU);
+    g.fillStyle = '#f5f2ff'; g.fill(); g.lineWidth = 4; g.strokeStyle = '#15122b'; g.stroke();
+
+    // 針（回転しない）
+    g.beginPath();
+    g.moveTo(cx - 14, cy - r - 12);
+    g.lineTo(cx + 14, cy - r - 12);
+    g.lineTo(cx, cy - r + 20);
+    g.closePath();
+    g.fillStyle = '#ff4d4d'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = '#f5f2ff'; g.stroke();
+  }
+
+  // 針（12時）が指している項目の番号
+  function pointedIndex(n) {
+    const a = ((-rot) % TAU + TAU) % TAU;
+    return Math.min(n - 1, Math.floor(a / (TAU / n)));
+  }
+
+  // ---------- 効果音（WebAudio。音声ファイルなし） ----------
+  function audio() {
+    if (!sound) return null;
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function beep(freq, dur, vol, type) {
+    const a = audio();
+    if (!a) return;
+    const o = a.createOscillator(), gn = a.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    gn.gain.setValueAtTime(vol, a.currentTime);
+    gn.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(gn).connect(a.destination);
+    o.start(); o.stop(a.currentTime + dur);
+  }
+  function fanfare() {
+    [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.18, 0.08, 'triangle'), i * 110));
+  }
+
+  // ---------- 回す ----------
+  function spin() {
+    const list = active();
+    if (spinning || items.length < MIN) return;
+    if (!list.length) { used = []; save(); render(); return; }
+    audio();
+    spinning = true;
+    render();
+    const n = list.length;
+    const seg = TAU / n;
+    // 当たりのセクター内のランダムな位置で止まるよう、最終角度を決める
+    const target = Math.floor(Math.random() * n);
+    const offset = (0.15 + Math.random() * 0.7) * seg;
+    const finalMod = -(target * seg + offset);
+    const startRot = rot;
+    const base = startRot - (((startRot - finalMod) % TAU) + TAU) % TAU;
+    const endRot = base + TAU * (5 + Math.floor(Math.random() * 3));
+    const dur = 4200 + Math.random() * 1600;
+    const t0 = performance.now();
+    let last = pointedIndex(n);
+
+    const frame = now => {
+      const t = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - t, 4);
+      rot = startRot + (endRot - startRot) * e;
+      draw();
+      const idx = pointedIndex(n);
+      if (idx !== last) { last = idx; beep(1400, 0.025, 0.05); }
+      if (t < 1) { requestAnimationFrame(frame); return; }
+      rot = ((rot % TAU) + TAU) % TAU;
+      draw();
+      // 表示は実際に針が指している項目から決める
+      finish(list[pointedIndex(n)]);
+    };
+    requestAnimationFrame(frame);
+  }
+
+  function finish(name) {
+    spinning = false;
+    fanfare();
+    try { if (navigator.vibrate) navigator.vibrate(150); } catch (e) { /* 振動非対応 */ }
+    $('#resultName').textContent = name;
+    $('#result').classList.remove('hidden');
+    if (exclude && !used.includes(name)) used.push(name);
+    save();
+  }
+
+  function closeResult() {
+    $('#result').classList.add('hidden');
+    render();
+  }
+
+  // ---------- 画面 ----------
+  function render() {
+    const n = items.length;
+    const c = $('#count');
+    c.textContent = n < MIN ? `${n}個（あと${MIN - n}個以上入れてね）` : `${n}個` + (n >= MAX ? '（上限）' : '');
+    c.classList.toggle('bad', n < MIN);
+    $('#excludeChk').checked = exclude;
+    const left = active().length;
+    const shownUsed = used.filter(s => items.includes(s));
+    $('#usedBox').classList.toggle('hidden', !exclude || !shownUsed.length);
+    $('#usedList').innerHTML = '';
+    shownUsed.forEach(s => {
+      const el = document.createElement('span');
+      el.className = 'chip'; el.textContent = s;
+      $('#usedList').appendChild(el);
+    });
+    const btn = $('#spinBtn');
+    btn.disabled = spinning || n < MIN;
+    btn.textContent = n >= MIN && !left ? '全員当たった！ タップでリセット' : '回す！ 🎯';
+    $('#itemsInput').disabled = spinning;
+    $('#soundBtn').textContent = sound ? '🔊 音あり' : '🔇 音なし';
+    $('#soundBtn').setAttribute('aria-pressed', String(sound));
+    draw();
+  }
+
+  function setItems(list) {
+    items = list;
+    used = used.filter(s => items.includes(s));
+    save();
+    render();
+  }
+
+  PRESETS.forEach(p => {
+    const b = document.createElement('button');
+    b.className = 'btn small'; b.textContent = p.name;
+    b.addEventListener('click', () => {
+      if (spinning) return;
+      $('#itemsInput').value = p.items.join('\n');
+      used = [];
+      setItems(p.items.slice());
+    });
+    $('#presets').appendChild(b);
+  });
+
+  $('#itemsInput').value = items.join('\n');
+  $('#itemsInput').addEventListener('input', e => setItems(parse(e.target.value)));
+  $('#excludeChk').addEventListener('change', e => { exclude = e.target.checked; used = []; save(); render(); });
+  $('#resetUsedBtn').addEventListener('click', () => { used = []; save(); render(); });
+  $('#spinBtn').addEventListener('click', spin);
+  $('#againBtn').addEventListener('click', () => { closeResult(); spin(); });
+  $('#closeBtn').addEventListener('click', closeResult);
+  $('#soundBtn').addEventListener('click', () => {
+    sound = !sound;
+    try { localStorage.setItem('nomige-sound', sound ? 'on' : 'off'); } catch (e) { /* 保存不可でも動く */ }
+    render();
+  });
+  window.addEventListener('resize', resize);
+
+  render();
+  resize();
+})();
+</script>
+</body>
+</html>
