@@ -21,4 +21,14 @@ window.GAMES = [
     path: 'games/fibe-derby/',
     color: '#5ce07a',
   },
+  {
+  id: 'king-game',
+  title: '王様ゲーム',
+  emoji: '👑',
+  desc: 'スマホを回してこっそりくじ引き。王様は命令ガチャで「〇番と△番が〜」を決めよう！',
+  players: '3〜12人', minPlayers: 3, maxPlayers: 12, time: '1ラウンド3分',
+  tags: ['スマホ回し', '盛り上がる'],
+  path: 'games/king-game/',
+  color: '#ffcc33',
+  },
 ];
