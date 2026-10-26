@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>10秒ストップ｜のみゲー！</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏱️</text></svg>">
+<link rel="stylesheet" href="../../assets/common.css">
+<style>
+  .label { color: var(--sub); font-size: .85rem; font-weight: 700; }
+  .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .seg.four { grid-template-columns: repeat(4, 1fr); }
+  .seg button { border: 2px solid var(--line); background: var(--bg2); color: var(--sub); border-radius: 10px; padding: 8px 4px; font-weight: 700; min-width: 0; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .players { display: grid; gap: 6px; }
+  .players .row { flex-wrap: nowrap; }
+  .players .field { flex: 1; min-width: 0; }
+  .best { text-align: center; color: var(--sub); }
+  .best b { color: var(--accent); }
+
+  .stage {
+    position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column;
+    background: var(--bg); background-image: radial-gradient(circle at 50% 30%, #3a2f7a 0, transparent 60%);
+    overflow: hidden;
+  }
+  .stage-top { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+  .stage-top .who { flex: 1; min-width: 0; font-weight: 900; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tap {
+    flex: 1; width: 100%; border: 0; background: transparent; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 16px;
+    touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  .tap.running { background: #ffffff08; }
+  .tap:focus { outline: none; }
+  .target { font-size: 1.1rem; color: var(--sub); font-weight: 700; }
+  .target b { color: var(--accent); font-size: 1.5rem; }
+  .digits { font-size: clamp(4rem, 24vw, 8rem); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .digits.masked { color: var(--pink); }
+  .hint {
+    margin-top: 12px; padding: 14px 28px; border-radius: 999px; font-size: 1.3rem; font-weight: 900;
+    background: var(--accent); color: var(--accent-ink);
+  }
+  .tap.running .hint { background: var(--pink); color: #fff; }
+
+  .result { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 16px; text-align: center; overflow-y: auto; }
+  .diff { font-size: clamp(3.2rem, 18vw, 6rem); font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  .diff small { font-size: .4em; margin-left: .1em; }
+  .diff.plus { color: var(--pink); }
+  .diff.minus { color: var(--cyan); }
+  .diff.zero { color: var(--accent); }
+  .actual { color: var(--sub); }
+  .comment { font-size: 1.3rem; font-weight: 900; }
+  .result .row { justify-content: center; }
+
+  .perfect { position: fixed; inset: 0; z-index: 90; pointer-events: none; overflow: hidden; }
+  .perfect .flash { position: absolute; inset: 0; background: radial-gradient(circle, #fff6 0, #ffcc3355 40%, transparent 70%); animation: flash 1.2s ease-out forwards; }
+  .perfect .word {
+    position: absolute; left: 0; right: 0; top: 18%; text-align: center; font-size: clamp(2.4rem, 14vw, 5rem); font-weight: 900;
+    color: var(--accent); text-shadow: 0 4px 0 #0007; animation: pop .6s cubic-bezier(.2, 1.6, .4, 1) both;
+  }
+  .perfect .bit { position: absolute; top: -10%; font-size: 1.8rem; animation: fall linear forwards; }
+  @keyframes flash { 0% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes pop { 0% { transform: scale(.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes fall { to { transform: translateY(120vh) rotate(540deg); } }
+
+  .rank { display: grid; gap: 6px; }
+  .rank .item { display: flex; align-items: center; gap: 10px; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+  .rank .no { width: 2.2em; font-weight: 900; color: var(--sub); flex: none; }
+  .rank .name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank .val { font-weight: 900; font-variant-numeric: tabular-nums; flex: none; }
+  .rank .item.top { border-color: var(--accent); }
+  .rank .item.top .no { color: var(--accent); }
+  .rank .item.last { border-color: var(--danger); }
+  .loser { text-align: center; }
+  .loser .big { font-size: 1.6rem; font-weight: 900; color: var(--danger); overflow-wrap: anywhere; }
+  .penalty { background: #0005; border-radius: 12px; padding: 10px 14px; font-weight: 700; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header class="g-header">
+  <a class="back" href="../../">← 一覧</a>
+  <h1>⏱️ 10秒ストップ</h1>
+</header>
+
+<main class="g-main stack">
+  <!-- 準備画面 -->
+  <section id="setup" class="stack">
+    <div class="card stack">
+      <span class="label">モード</span>
+      <div class="seg" id="modeSeg">
+        <button data-v="solo" class="on">1人で</button>
+        <button data-v="group">みんなで</button>
+      </div>
+    </div>
+    <div class="card stack">
+      <span class="label">目標の秒数</span>
+      <div class="seg four" id="targetSeg">
+        <button data-v="5">5秒</button>
+        <button data-v="10" class="on">10秒</button>
+        <button data-v="15">15秒</button>
+        <button data-v="random">ランダム</button>
+      </div>
+      <span class="label">難易度</span>
+      <div class="seg" id="hideSeg">
+        <button data-v="peek" class="on">最初の3秒だけ見える</button>
+        <button data-v="blind">ずっと見えない</button>
+      </div>
+    </div>
+    <div class="card stack hidden" id="playersCard">
+      <span class="label">プレイヤー（2〜12人）</span>
+      <div class="players" id="players"></div>
+      <button class="btn" id="addPlayerBtn">＋ プレイヤーを追加</button>
+    </div>
+    <p class="best" id="best"></p>
+    <button class="btn big primary" id="startBtn">はじめる ⏱️</button>
+    <div class="card note">
+      <b>遊び方</b><br>
+      画面をタップするとスタート。目標の秒数ちょうどだと思ったところで、もう一度どこでもタップしてストップ！
+      数字は途中で消えるので体内時計が頼り。差が小さいほど上位です。
+      みんなでモードは、スマホを順番に回して全員が挑戦したらランキング発表。
+    </div>
+  </section>
+
+  <!-- 順番待ち（みんなで） -->
+  <section id="turn" class="stack hidden">
+    <div class="card stack center">
+      <span class="label" id="turnCount"></span>
+      <div style="font-size:1.8rem;font-weight:900;overflow-wrap:anywhere" id="turnName"></div>
+      <p class="muted" style="margin:0">スマホを受け取ったら準備OKを押してね</p>
+    </div>
+    <button class="btn big primary" id="readyBtn">準備OK 👍</button>
+    <button class="btn" id="quitGroupBtn">やめて設定に戻る</button>
+  </section>
+
+  <!-- ランキング（みんなで） -->
+  <section id="ranking" class="stack hidden">
+    <div class="card loser" id="loser"></div>
+    <div class="card stack">
+      <span class="label" id="rankTarget"></span>
+      <div class="rank" id="rankList"></div>
+    </div>
+    <button class="btn big primary" id="againGroupBtn">同じメンバーでもう一回</button>
+    <button class="btn" id="backSetupBtn">設定に戻る</button>
+  </section>
+</main>
+
+<!-- 計測画面（全画面） -->
+<div class="stage hidden" id="stage">
+  <div class="stage-top">
+    <span class="who" id="stageWho"></span>
+    <button class="btn small" id="quitBtn">やめる</button>
+  </div>
+  <button class="tap" id="tap">
+    <span class="target">目標 <b id="targetText">10.00</b> 秒</span>
+    <span class="digits" id="digits">0.00</span>
+    <span class="hint" id="hint">タップでスタート</span>
+  </button>
+  <div class="result hidden" id="result">
+    <div class="diff" id="diff"></div>
+    <div class="actual" id="actual"></div>
+    <div class="comment" id="comment"></div>
+    <div class="muted" id="resultBest"></div>
+    <div class="row">
+      <button class="btn big primary" id="nextBtn">もう一回</button>
+      <button class="btn" id="toSetupBtn">設定に戻る</button>
+    </div>
+  </div>
+</div>
+
+<div class="perfect hidden" id="perfect"></div>
+
+<script>
+(() => {
+  const PENALTIES = [
+    '好きな食べ物を3つ発表', '最近あった小さな幸せを話す', '右隣の人のいいところを1つ褒める', '一発ギャグ（スベってもOK）',
+    'みんなに飲み物を注いで回る', '次の乾杯の音頭をとる', '子どもの頃の夢を発表', 'お水かソフトドリンクを一杯飲む',
+    '最近ハマっていることを30秒プレゼン', '10秒間全力の笑顔をキープ',
+  ];
+  const PEEK_MS = 3000;
+  const BEST_KEY = 'nomige-ten-seconds-best';
+
+  const $ = s => document.querySelector(s);
+  let mode = 'solo', targetSel = '10', hide = 'peek';
+  let players = ['', ''];
+  let target = 10;
+  let state = 'idle'; // idle → ready → running → done
+  let startAt = 0, raf = 0, lockUntil = 0;
+  let order = [], turnIdx = 0, scores = [];
+  let bests = {};
+
+  try { bests = JSON.parse(localStorage.getItem(BEST_KEY)) || {}; } catch (e) { bests = {}; }
+
+  const show = id => ['#setup', '#turn', '#ranking'].forEach(s => $(s).classList.toggle('hidden', s !== id));
+  const bestKey = () => `${targetSel}-${hide}`;
+  const pickTarget = () => targetSel === 'random' ? 5 + Math.floor(Math.random() * 16) : Number(targetSel);
+  const fmtDiff = d => Math.round(d * 100) === 0 ? '±0.00' : (d > 0 ? '+' : '-') + Math.abs(d).toFixed(2);
+
+  function renderSetup() {
+    [['#modeSeg', mode], ['#targetSeg', targetSel], ['#hideSeg', hide]].forEach(([sel, v]) => {
+      document.querySelectorAll(sel + ' button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+    });
+    $('#playersCard').classList.toggle('hidden', mode !== 'group');
+    $('#best').classList.toggle('hidden', mode !== 'solo');
+    const b = bests[bestKey()];
+    $('#best').innerHTML = b == null ? 'この設定の自己ベスト：まだなし' : `この設定の自己ベスト：<b>${b.toFixed(2)}秒差</b>`;
+    renderPlayers();
+  }
+
+  function renderPlayers() {
+    const box = $('#players');
+    box.innerHTML = '';
+    players.forEach((name, i) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      const input = document.createElement('input');
+      input.className = 'field';
+      input.maxLength = 12;
+      input.placeholder = `プレイヤー${i + 1}`;
+      input.value = name;
+      input.addEventListener('input', () => { players[i] = input.value; });
+      const del = document.createElement('button');
+      del.className = 'btn small';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', `プレイヤー${i + 1}を削除`);
+      del.disabled = players.length <= 2;
+      del.addEventListener('click', () => { players.splice(i, 1); renderPlayers(); });
+      row.append(input, del);
+      box.append(row);
+    });
+    $('#addPlayerBtn').disabled = players.length >= 12;
+  }
+
+  // ---------- 計測 ----------
+  function openStage(who) {
+    state = 'ready';
+    $('#stageWho').textContent = who;
+    $('#targetText').textContent = target.toFixed(2);
+    $('#digits').textContent = '0.00';
+    $('#digits').classList.remove('masked');
+    $('#hint').textContent = 'タップでスタート';
+    $('#tap').classList.remove('running', 'hidden');
+    $('#result').classList.add('hidden');
+    $('#stage').classList.remove('hidden');
+    $('#tap').focus();
+  }
+  function closeStage() {
+    cancelAnimationFrame(raf);
+    state = 'idle';
+    $('#stage').classList.add('hidden');
+  }
+
+  function frame() {
+    const t = (performance.now() - startAt) / 1000;
+    const masked = hide === 'blind' || t * 1000 >= PEEK_MS;
+    $('#digits').textContent = masked ? '？？.??' : t.toFixed(2);
+    $('#digits').classList.toggle('masked', masked);
+    raf = requestAnimationFrame(frame);
+  }
+
+  function press() {
+    const now = performance.now();
+    if (state === 'ready') {
+      state = 'running';
+      startAt = now;
+      lockUntil = now + 300;
+      $('#hint').textContent = 'タップでストップ';
+      $('#tap').classList.add('running');
+      raf = requestAnimationFrame(frame);
+    } else if (state === 'running' && now >= lockUntil) {
+      state = 'done';
+      cancelAnimationFrame(raf);
+      finish((now - startAt) / 1000);
+    }
+  }
+
+  function comment(abs) {
+    if (Math.round(abs * 100) === 0) return 'ピッタリ！！神の体内時計 🎯';
+    if (abs < 0.1) return 'ほぼピッタリ！すごすぎる ✨';
+    if (abs < 0.3) return 'かなり正確！👏';
+    if (abs < 0.7) return 'なかなかいい感じ 👍';
+    if (abs < 1.5) return 'まあまあ… 🤔';
+    return '体内時計、ズレてます 😵';
+  }
+
+  function finish(sec) {
+    const d = sec - target, abs = Math.abs(d);
+    const zero = Math.round(d * 100) === 0;
+    $('#digits').textContent = sec.toFixed(2);
+    $('#digits').classList.remove('masked');
+    $('#diff').innerHTML = fmtDiff(d) + '<small>秒</small>';
+    $('#diff').className = 'diff ' + (zero ? 'zero' : d > 0 ? 'plus' : 'minus');
+    $('#actual').textContent = `記録 ${sec.toFixed(2)} 秒（目標 ${target.toFixed(2)} 秒）`;
+    $('#comment').textContent = comment(abs);
+    $('#resultBest').textContent = '';
+
+    if (mode === 'solo') {
+      const k = bestKey(), prev = bests[k];
+      if (prev == null || abs < prev) {
+        bests[k] = abs;
+        try { localStorage.setItem(BEST_KEY, JSON.stringify(bests)); } catch (e) { /* 保存不可でも動く */ }
+        $('#resultBest').textContent = prev == null ? '自己ベスト記録！' : `🎉 自己ベスト更新！（前回 ${prev.toFixed(2)}秒差）`;
+      } else {
+        $('#resultBest').textContent = `自己ベスト：${prev.toFixed(2)}秒差`;
+      }
+      $('#nextBtn').textContent = 'もう一回';
+    } else {
+      scores.push({ name: order[turnIdx], sec, d });
+      $('#nextBtn').textContent = turnIdx + 1 < order.length ? '次の人へ 👉' : 'ランキング発表 🏆';
+    }
+
+    $('#tap').classList.add('hidden');
+    $('#result').classList.remove('hidden');
+    // ストップ直後の連打で次へ進まないように少しだけ無効化
+    $('#nextBtn').disabled = $('#toSetupBtn').disabled = true;
+    setTimeout(() => { $('#nextBtn').disabled = $('#toSetupBtn').disabled = false; }, 600);
+    if (zero) celebrate();
+  }
+
+  function celebrate() {
+    const box = $('#perfect');
+    box.innerHTML = '<div class="flash"></div><div class="word">ピッタリ！！</div>';
+    const icons = ['🎉', '✨', '🎊', '⭐', '🥳'];
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement('span');
+      s.className = 'bit';
+      s.textContent = icons[i % icons.length];
+      s.style.left = (Math.random() * 95) + '%';
+      s.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+      s.style.animationDelay = (Math.random() * .6) + 's';
+      box.append(s);
+    }
+    box.classList.remove('hidden');
+    try { if (navigator.vibrate) navigator.vibrate([100, 60, 100, 60, 300]); } catch (e) { /* 振動非対応 */ }
+    setTimeout(() => box.classList.add('hidden'), 3600);
+  }
+
+  // ---------- みんなでモード ----------
+  function startGroup() {
+    order = players.map((p, i) => p.trim() || `プレイヤー${i + 1}`);
+    target = pickTarget();
+    turnIdx = 0;
+    scores = [];
+    showTurn();
+  }
+  function showTurn() {
+    $('#turnCount').textContent = `${turnIdx + 1} / ${order.length} 人目（目標 ${target} 秒）`;
+    $('#turnName').textContent = `${order[turnIdx]} さんの番`;
+    show('#turn');
+  }
+  function showRanking() {
+    const list = scores.slice().sort((a, b) => Math.abs(a.d) - Math.abs(b.d));
+    const box = $('#rankList');
+    box.innerHTML = '';
+    list.forEach((s, i) => {
+      const item = document.createElement('div');
+      item.className = 'item' + (i === 0 ? ' top' : i === list.length - 1 ? ' last' : '');
+      const no = document.createElement('span'); no.className = 'no'; no.textContent = i === 0 ? '👑' : `${i + 1}位`;
+      const name = document.createElement('span'); name.className = 'name'; name.textContent = s.name;
+      const val = document.createElement('span'); val.className = 'val'; val.textContent = fmtDiff(s.d) + '秒';
+      item.append(no, name, val);
+      box.append(item);
+    });
+    $('#rankTarget').textContent = `目標 ${target} 秒 ・ 差の小さい順`;
+    const last = list[list.length - 1];
+    const loser = $('#loser');
+    loser.innerHTML = '<span class="label">最下位は…</span><div class="big"></div><div class="muted"></div><div class="penalty"></div>';
+    loser.querySelector('.big').textContent = `${last.name} さん`;
+    loser.querySelector('.muted').textContent = `記録 ${last.sec.toFixed(2)} 秒（${fmtDiff(last.d)}秒）`;
+    loser.querySelector('.penalty').textContent = '罰ゲーム：' + PENALTIES[Math.floor(Math.random() * PENALTIES.length)];
+    show('#ranking');
+  }
+
+  // ---------- イベント ----------
+  [['#modeSeg', v => { mode = v; }], ['#targetSeg', v => { targetSel = v; }], ['#hideSeg', v => { hide = v; }]].forEach(([sel, set]) => {
+    $(sel).addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (b) { set(b.dataset.v); renderSetup(); }
+    });
+  });
+  $('#addPlayerBtn').addEventListener('click', () => {
+    if (players.length < 12) { players.push(''); renderPlayers(); $('#players').lastChild.querySelector('input').focus(); }
+  });
+  $('#startBtn').addEventListener('click', () => {
+    if (mode === 'solo') { target = pickTarget(); openStage('1人モード'); } else startGroup();
+  });
+  $('#readyBtn').addEventListener('click', () => openStage(`${order[turnIdx]} さん`));
+  $('#quitGroupBtn').addEventListener('click', () => { show('#setup'); renderSetup(); });
+
+  $('#tap').addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    press();
+  });
+  $('#tap').addEventListener('contextmenu', e => e.preventDefault());
+  // キーボード操作（PC用）
+  document.addEventListener('keydown', e => {
+    if ($('#stage').classList.contains('hidden') || state === 'done') return;
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (!e.repeat) press(); }
+  });
+
+  $('#nextBtn').addEventListener('click', () => {
+    if (mode === 'solo') { target = pickTarget(); openStage('1人モード'); return; }
+    closeStage();
+    turnIdx++;
+    if (turnIdx < order.length) showTurn(); else showRanking();
+  });
+  $('#toSetupBtn').addEventListener('click', () => { closeStage(); show('#setup'); renderSetup(); });
+  $('#quitBtn').addEventListener('click', () => {
+    if (mode === 'group' && state === 'done') scores.pop();
+    closeStage();
+    if (mode === 'group' && turnIdx < order.length) showTurn(); else { show('#setup'); renderSetup(); }
+  });
+  $('#againGroupBtn').addEventListener('click', startGroup);
+  $('#backSetupBtn').addEventListener('click', () => { show('#setup'); renderSetup(); });
+
+  // 計測中に画面を離れたら、その回はやり直し
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && state === 'running') {
+      cancelAnimationFrame(raf);
+      openStage($('#stageWho').textContent);
+    }
+  });
+
+  renderSetup();
+})();
+</script>
+</body>
+</html>
