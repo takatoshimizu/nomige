@@ -41,4 +41,14 @@ window.GAMES = [
   path: 'games/word-wolf/',
   color: '#3ee0d0',
   },
+  {
+  id: 'topic-gacha',
+  title: '話題ガチャ',
+  emoji: '🎰',
+  desc: 'ガチャを回してトークテーマを決めよう。SSRが出たらちょっと深い話を。話す人もランダムで指名できる！',
+  players: '2人〜', minPlayers: 2, maxPlayers: 99, time: '1回1分〜',
+  tags: ['トーク', 'はじめましてにも'],
+  path: 'games/topic-gacha/',
+  color: '#a78bfa',
+  },
 ];
