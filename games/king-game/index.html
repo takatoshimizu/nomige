@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>王様ゲーム｜のみゲー！</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+<link rel="stylesheet" href="../../assets/common.css">
+<style>
+  .label { color: var(--sub); font-size: .85rem; font-weight: 700; }
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 16px; }
+  .stepper .btn { width: 56px; height: 56px; font-size: 1.6rem; padding: 0; }
+  .stepper .num { font-size: 2.4rem; font-weight: 900; min-width: 4ch; text-align: center; }
+  .names { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+  .names label { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .names .no { color: var(--sub); font-weight: 700; font-size: .85rem; white-space: nowrap; }
+  .names .field { min-width: 0; padding: 8px 10px; }
+  .turn { text-align: center; }
+  .turn .who { font-size: clamp(1.6rem, 8vw, 2.4rem); font-weight: 900; margin: 4px 0; word-break: break-all; }
+  .progress { text-align: center; color: var(--sub); font-size: .9rem; }
+  .stick {
+    font-size: clamp(4rem, 26vw, 7rem); font-weight: 900; text-align: center; line-height: 1.1; margin: 8px 0;
+    animation: pop .35s ease-out;
+  }
+  .stick.king { color: var(--accent); }
+  .stick small { display: block; font-size: 1rem; color: var(--sub); font-weight: 700; }
+  @keyframes pop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+  .crown { font-size: 5rem; text-align: center; line-height: 1; animation: pop .5s ease-out; }
+  .king-name { font-size: clamp(1.6rem, 8vw, 2.4rem); font-weight: 900; text-align: center; color: var(--accent); word-break: break-all; }
+  .order {
+    font-size: clamp(1.2rem, 5.5vw, 1.6rem); font-weight: 900; text-align: center; line-height: 1.5; min-height: 3em;
+    display: grid; place-items: center; word-break: break-word;
+  }
+  .order b { color: var(--pink); }
+  .order.spin { animation: pop .3s ease-out; }
+  .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .seg button { border: 2px solid var(--line); background: var(--bg2); color: var(--sub); border-radius: 10px; padding: 8px 4px; font-weight: 700; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .nums { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .nums span {
+    min-width: 56px; padding: 8px 10px; border-radius: 12px; background: var(--bg2); border: 2px solid var(--line);
+    font-size: 1.4rem; font-weight: 900; text-align: center;
+  }
+  .nums span.pick { background: var(--pink); border-color: var(--pink); color: #fff; }
+  .answers { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+  .answers div { background: var(--bg2); border-radius: 10px; padding: 6px 10px; min-width: 0; overflow-wrap: anywhere; }
+  .answers b { color: var(--cyan); margin-right: 6px; }
+  .history { display: flex; flex-wrap: wrap; gap: 6px; }
+</style>
+</head>
+<body>
+<header class="g-header">
+  <a class="back" href="../../">← 一覧</a>
+  <h1>👑 王様ゲーム</h1>
+</header>
+
+<main class="g-main stack">
+  <!-- 準備画面 -->
+  <section id="setup" class="stack">
+    <div class="card stack">
+      <span class="label">人数</span>
+      <div class="stepper">
+        <button class="btn" id="minusBtn" aria-label="減らす">−</button>
+        <span class="num" id="count">5人</span>
+        <button class="btn" id="plusBtn" aria-label="増やす">＋</button>
+      </div>
+    </div>
+    <div class="card stack">
+      <span class="label">名前（任意・空なら番号で呼びます）</span>
+      <div class="names" id="names"></div>
+    </div>
+    <button class="btn big primary" id="startBtn">くじを配る 🥢</button>
+    <div class="card note">
+      <b>遊び方</b><br>
+      スマホを順番に回して、1人ずつこっそりくじを引きます。1本だけ「王様」、残りは番号。
+      全員引いたら「王様だーれだ！」で王様が名乗り出て、番号で命令！ 命令された番号の人は名乗り出て実行します。
+      自分の番号は覚えておいて、他の人には見せないでね。
+    </div>
+  </section>
+
+  <!-- くじ引き：渡す画面 -->
+  <section id="handoff" class="stack hidden">
+    <p class="progress" id="progress"></p>
+    <div class="card turn stack">
+      <span class="label">次にくじを引くのは</span>
+      <div class="who" id="turnName"></div>
+      <span class="muted">本人だけが画面を見てね 🙈</span>
+    </div>
+    <button class="btn big pink" id="drawBtn">くじを引く 🥢</button>
+  </section>
+
+  <!-- くじ引き：結果 -->
+  <section id="result" class="stack hidden">
+    <div class="card stack">
+      <span class="label center" id="resultWho"></span>
+      <div class="stick" id="stick"></div>
+    </div>
+    <button class="btn big primary" id="hideBtn">覚えた！隠して次へ</button>
+  </section>
+
+  <!-- 全員引いた -->
+  <section id="ready" class="stack hidden">
+    <div class="card center stack">
+      <div class="crown">🥢</div>
+      <b>全員くじを引きました！</b>
+      <span class="muted">みんなで声をそろえて…</span>
+    </div>
+    <button class="btn big primary" id="revealBtn">王様だーれだ！</button>
+  </section>
+
+  <!-- 王様の画面 -->
+  <section id="king" class="stack hidden">
+    <div class="card stack">
+      <div class="crown">👑</div>
+      <div class="king-name" id="kingName"></div>
+      <p class="center muted" style="margin:0">王様の命令は絶対！（でも無理はしない）</p>
+    </div>
+    <div class="seg" id="modeSeg">
+      <button data-mode="gacha" class="on">🎰 命令ガチャ</button>
+      <button data-mode="free">✍️ 自由に命令</button>
+    </div>
+    <div class="card stack" id="gachaBox">
+      <div class="order" id="order">ボタンを押して命令を決めよう</div>
+      <button class="btn big pink" id="gachaBtn">命令ガチャを回す 🎰</button>
+    </div>
+    <div class="card stack hidden" id="freeBox">
+      <span class="label">今回の番号（王様は好きに選んで命令してね）</span>
+      <div class="nums" id="nums"></div>
+      <button class="btn" id="pickBtn">🎲 番号を2つランダムに選ぶ</button>
+    </div>
+    <div class="card stack">
+      <button class="btn" id="answerBtn">🔍 答え合わせ（誰が何番？）</button>
+      <div class="answers hidden" id="answers"></div>
+    </div>
+    <button class="btn big primary" id="nextBtn">次のラウンド（引き直す）</button>
+    <div class="card stack">
+      <span class="label">王様になった回数</span>
+      <div class="history" id="history"></div>
+      <button class="btn small" id="resetBtn" style="justify-self:start">メンバーを変える</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // {A} {B} {C} に番号が入る。使う番号の数だけ人数が必要
+  const ORDERS = [
+    '{A}が{B}のいいところを3つ言う',
+    '{A}と{B}がじゃんけんして、負けた方が一発ギャグ',
+    '{A}が最近の失敗談を話す',
+    '{A}が子どもの頃の夢を発表する',
+    '{A}と{B}が息を合わせて同時に手拍子を3回',
+    '{A}が{B}に感謝していることを1つ伝える',
+    '{A}が好きな食べ物ベスト3を発表',
+    '{A}が最近ハマっていることを30秒でプレゼン',
+    '{A}がモノマネを1つ（誰でもOK）',
+    '{A}と{B}が同時に好きな季節を言う。そろったら拍手！',
+    '{A}が次の乾杯の音頭をとる',
+    '{A}が語尾に「〜ござる」をつけて次のラウンドまで話す',
+    '{A}が{B}の第一印象を発表する',
+    '{A}と{B}がしりとりで5往復する',
+    '{A}が人生で一番笑った話をする',
+    '{A}が変顔をして、{B}が採点する（100点満点）',
+    '{A}が今年の目標を宣言する',
+    '{A}が{B}を動物に例える（理由つき）',
+    '{A}と{B}があっち向いてホイで勝負',
+    '{A}が自分の名前で「あいうえお作文」',
+    '{A}が休日の過ごし方を発表する',
+    '{A}が最近一番うれしかったことを話す',
+    '{A}が{B}におすすめの映画か本を1つ紹介する',
+    '{A}が「実は〇〇なんです」と意外な一面を告白',
+    '{A}と{B}が10秒間、真顔でにらめっこ',
+    '{A}がアナウンサー風に今日の飲み会を実況',
+    '{A}が全員の飲み物をチェックして注文を聞く係になる',
+    '{A}が好きな歌のサビを鼻歌で歌い、みんなで曲名を当てる',
+    '{A}が{B}の似顔絵をおしぼりの袋かメモに描く',
+    '{A}がこの中で一番〇〇だと思う人を発表（お題は王様が決める）',
+    '{A}と{B}が「せーの」で好きな色を言う。そろうまで3回まで',
+    '{A}がジェスチャーだけで動物を表現し、{B}が当てる',
+    '{A}が地元の自慢を1分間語る',
+    '{A}が王様を全力で褒める',
+    '{A}が「もし宝くじが当たったら」の妄想を語る',
+    '{A}が早口言葉「生麦生米生卵」を3回言う',
+    '{A}と{B}が肩書きを交換して、お互いになりきって自己紹介',
+    '{A}が最近買ってよかったものを紹介する',
+    '{A}が座右の銘か好きな言葉を発表する',
+    '{A}が{B}と{C}の共通点を見つけて発表する',
+    '{A}・{B}・{C}で「せーの」で同じポーズをとる',
+    '{A}が{B}と{C}に「最近ありがとう」と思ったことを伝える',
+    '{A}が5秒以内に赤いものを3つ言う',
+    '{A}が次のラウンドまで敬語禁止（王様にだけは敬語）',
+    '{A}がご当地キャラ風の自己紹介をする',
+    '{A}が全員にお水かソフトドリンクを配る（自分の分も）',
+  ];
+  const MIN = 3, MAX = 12;
+  const KEY = 'nomige-king';
+
+  const $ = s => document.querySelector(s);
+  let count = 5;
+  let names = [];
+  let kings = [];      // 王様になった回数（プレイヤー順）
+  let sticks = [];     // 0 = 王様、それ以外は番号
+  let turn = 0, mode = 'gacha', lastOrder = -1;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (saved && saved.count >= MIN && saved.count <= MAX) {
+      count = saved.count;
+      names = Array.isArray(saved.names) ? saved.names.map(String) : [];
+    }
+  } catch (e) { /* 保存データなしでも動く */ }
+
+  const nameOf = i => (names[i] || '').trim() || `${i + 1}人目`;
+  const callName = i => (names[i] || '').trim() ? nameOf(i) + ' さん' : nameOf(i) + 'の人';
+  const show = id => ['setup', 'handoff', 'result', 'ready', 'king'].forEach(s => $('#' + s).classList.toggle('hidden', s !== id));
+  const rand = n => Math.floor(Math.random() * n);
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ count, names: names.slice(0, count) })); } catch (e) { /* 保存不可でも動く */ }
+  }
+
+  // ---------- 準備 ----------
+  function renderSetup() {
+    $('#count').textContent = `${count}人`;
+    $('#minusBtn').disabled = count <= MIN;
+    $('#plusBtn').disabled = count >= MAX;
+    const box = $('#names');
+    box.textContent = '';
+    for (let i = 0; i < count; i++) {
+      const label = document.createElement('label');
+      const no = document.createElement('span');
+      no.className = 'no';
+      no.textContent = `${i + 1}.`;
+      const input = document.createElement('input');
+      input.className = 'field';
+      input.maxLength = 10;
+      input.placeholder = `${i + 1}人目`;
+      input.value = names[i] || '';
+      input.addEventListener('input', () => { names[i] = input.value; save(); });
+      label.append(no, input);
+      box.append(label);
+    }
+  }
+  function changeCount(d) {
+    count = Math.min(MAX, Math.max(MIN, count + d));
+    save();
+    renderSetup();
+  }
+
+  // ---------- くじ引き ----------
+  function deal() {
+    if (kings.length !== count) kings = Array(count).fill(0);
+    const nums = shuffle(Array.from({ length: count }, (_, i) => i));
+    sticks = nums; // 0 が王様、1〜count-1 が番号
+    turn = 0;
+    lastOrder = -1;
+    showHandoff();
+  }
+  function showHandoff() {
+    $('#progress').textContent = `${turn + 1} / ${count} 人目`;
+    $('#turnName').textContent = callName(turn);
+    show('handoff');
+  }
+  function draw() {
+    const s = sticks[turn];
+    $('#resultWho').textContent = callName(turn) + 'のくじ';
+    const el = $('#stick');
+    el.className = 'stick' + (s === 0 ? ' king' : '');
+    el.textContent = s === 0 ? '👑 王様' : `${s}番`;
+    const sm = document.createElement('small');
+    sm.textContent = s === 0 ? '「王様だーれだ！」まで内緒にしてね' : 'この番号を覚えておいてね';
+    el.append(sm);
+    show('result');
+  }
+  function hideAndNext() {
+    $('#stick').textContent = '';
+    turn++;
+    if (turn < count) showHandoff();
+    else show('ready');
+  }
+
+  // ---------- 王様 ----------
+  function reveal() {
+    const k = sticks.indexOf(0);
+    kings[k]++;
+    $('#kingName').textContent = callName(k) + 'が王様！';
+    $('#order').textContent = 'ボタンを押して命令を決めよう';
+    $('#answers').classList.add('hidden');
+    $('#answerBtn').textContent = '🔍 答え合わせ（誰が何番？）';
+    renderNums([]);
+    renderHistory();
+    setMode(mode);
+    show('king');
+  }
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+    $('#gachaBox').classList.toggle('hidden', m !== 'gacha');
+    $('#freeBox').classList.toggle('hidden', m !== 'free');
+  }
+  function gacha() {
+    const avail = count - 1;
+    const usable = ORDERS.map((t, i) => i).filter(i => (ORDERS[i].includes('{C}') ? 3 : ORDERS[i].includes('{B}') ? 2 : 1) <= avail);
+    let idx;
+    do { idx = usable[rand(usable.length)]; } while (idx === lastOrder && usable.length > 1);
+    lastOrder = idx;
+    const picks = shuffle(Array.from({ length: avail }, (_, i) => i + 1));
+    const map = { A: picks[0], B: picks[1], C: picks[2] };
+    const el = $('#order');
+    el.textContent = '';
+    const p = document.createElement('span');
+    ORDERS[idx].split(/(\{[ABC]\})/).forEach(part => {
+      const m = part.match(/^\{([ABC])\}$/);
+      if (m) {
+        const b = document.createElement('b');
+        b.textContent = `${map[m[1]]}番`;
+        p.append(b);
+      } else if (part) {
+        p.append(part);
+      }
+    });
+    el.append(p);
+    el.classList.remove('spin');
+    void el.offsetWidth;
+    el.classList.add('spin');
+  }
+  function renderNums(picked) {
+    const box = $('#nums');
+    box.textContent = '';
+    for (let n = 1; n < count; n++) {
+      const s = document.createElement('span');
+      s.textContent = `${n}番`;
+      if (picked.includes(n)) s.className = 'pick';
+      box.append(s);
+    }
+  }
+  function toggleAnswers() {
+    const box = $('#answers');
+    if (!box.classList.contains('hidden')) {
+      box.classList.add('hidden');
+      $('#answerBtn').textContent = '🔍 答え合わせ（誰が何番？）';
+      return;
+    }
+    box.textContent = '';
+    sticks.map((s, i) => ({ s, i })).filter(o => o.s !== 0).sort((a, b) => a.s - b.s).forEach(o => {
+      const d = document.createElement('div');
+      const b = document.createElement('b');
+      b.textContent = `${o.s}番`;
+      d.append(b, nameOf(o.i));
+      box.append(d);
+    });
+    box.classList.remove('hidden');
+    $('#answerBtn').textContent = '🙈 答えを隠す';
+  }
+  function renderHistory() {
+    const box = $('#history');
+    box.textContent = '';
+    kings.map((c, i) => ({ c, i })).sort((a, b) => b.c - a.c || a.i - b.i).forEach(o => {
+      const c = document.createElement('span');
+      c.className = 'chip';
+      c.textContent = `${nameOf(o.i)} 👑×${o.c}`;
+      box.append(c);
+    });
+  }
+
+  $('#minusBtn').addEventListener('click', () => changeCount(-1));
+  $('#plusBtn').addEventListener('click', () => changeCount(1));
+  $('#startBtn').addEventListener('click', () => { kings = Array(count).fill(0); deal(); });
+  $('#drawBtn').addEventListener('click', draw);
+  $('#hideBtn').addEventListener('click', hideAndNext);
+  $('#revealBtn').addEventListener('click', reveal);
+  $('#modeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) setMode(b.dataset.mode);
+  });
+  $('#gachaBtn').addEventListener('click', gacha);
+  $('#pickBtn').addEventListener('click', () => renderNums(shuffle(Array.from({ length: count - 1 }, (_, i) => i + 1)).slice(0, 2)));
+  $('#answerBtn').addEventListener('click', toggleAnswers);
+  $('#nextBtn').addEventListener('click', deal);
+  $('#resetBtn').addEventListener('click', () => { renderSetup(); show('setup'); });
+
+  renderSetup();
+})();
+</script>
+</body>
+</html>
