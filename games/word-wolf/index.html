@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ワードウルフ｜のみゲー！</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐺</text></svg>">
+<link rel="stylesheet" href="../../assets/common.css">
+<style>
+  .label { color: var(--sub); font-size: .85rem; font-weight: 700; }
+  .seg { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .seg.c2 { grid-template-columns: repeat(2, 1fr); }
+  .seg.c5 { grid-template-columns: repeat(5, 1fr); }
+  .seg button { border: 2px solid var(--line); background: var(--bg2); color: var(--sub); border-radius: 10px; padding: 8px 2px; font-weight: 700; min-width: 0; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .names { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .turn { font-size: clamp(1.5rem, 7vw, 2.2rem); font-weight: 900; text-align: center; line-height: 1.3; margin: 8px 0 0; word-break: break-all; }
+  .word-box { display: grid; place-items: center; min-height: 160px; border-radius: var(--radius); border: 2px dashed var(--line); background: var(--bg2); text-align: center; padding: 16px; }
+  .word { font-size: clamp(2.2rem, 12vw, 3.6rem); font-weight: 900; color: var(--accent); line-height: 1.2; word-break: break-all; }
+  .progress { text-align: center; color: var(--sub); font-size: .9rem; }
+  .clock { font-size: clamp(4.5rem, 26vw, 8rem); font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; line-height: 1; margin: 12px 0 4px; }
+  .clock.low { color: var(--danger); animation: blink 1s infinite; }
+  .clock.paused { opacity: .5; }
+  @keyframes blink { 50% { opacity: .55; } }
+  .vote-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .vote-grid .btn { padding: 14px 8px; word-break: break-all; }
+  .count3 { font-size: clamp(4rem, 24vw, 7rem); font-weight: 900; text-align: center; color: var(--pink); line-height: 1; }
+  .verdict { font-size: clamp(1.6rem, 8vw, 2.4rem); font-weight: 900; text-align: center; line-height: 1.3; margin: 0; }
+  .words { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; text-align: center; }
+  .words div { background: var(--bg2); border-radius: 12px; padding: 10px 6px; }
+  .words b { display: block; font-size: 1.4rem; word-break: break-all; }
+  .wolf { color: var(--pink); }
+  .penalty { background: var(--bg2); border-radius: 12px; padding: 10px 14px; font-weight: 700; }
+</style>
+</head>
+<body>
+<header class="g-header">
+  <a class="back" href="../../">← 一覧</a>
+  <h1>🐺 ワードウルフ</h1>
+  <button class="btn small" id="soundBtn" aria-pressed="true">🔊 音あり</button>
+</header>
+
+<main class="g-main stack">
+  <!-- 設定 -->
+  <section id="setup" class="stack">
+    <div class="card stack">
+      <span class="label">人数</span>
+      <div class="seg" id="countSeg"></div>
+      <span class="label">ウルフの人数</span>
+      <div class="seg c2" id="wolfSeg">
+        <button data-w="1">1人</button>
+        <button data-w="2">2人（5人以上）</button>
+      </div>
+      <span class="label">話し合い時間</span>
+      <div class="seg c5" id="timeSeg"></div>
+    </div>
+    <div class="card stack">
+      <span class="label">プレイヤー名（空ならプレイヤー1…）</span>
+      <div class="names" id="names"></div>
+    </div>
+    <button class="btn big primary" id="startBtn">はじめる 🐺</button>
+    <div class="card note">
+      <b>遊び方</b><br>
+      1人だけ（または2人）違う言葉を配られた「ウルフ」がいます。自分の言葉について話し合って、ウルフを探しましょう。
+      自分がウルフかどうかは自分にもわかりません。言葉そのものは言っちゃダメ！
+    </div>
+  </section>
+
+  <!-- 配布 -->
+  <section id="deal" class="stack hidden">
+    <p class="progress" id="dealProgress"></p>
+    <div class="card stack">
+      <p class="turn" id="dealName"></p>
+      <p class="center muted" id="dealHint" style="margin:0"></p>
+      <div class="word-box" id="wordBox"><div class="word" id="word"></div></div>
+    </div>
+    <button class="btn big primary" id="showBtn">タップして言葉を見る 👀</button>
+    <button class="btn big pink hidden" id="nextBtn">確認した、次の人へ 👉</button>
+  </section>
+
+  <!-- 話し合い -->
+  <section id="talk" class="stack hidden">
+    <div class="card">
+      <div class="label center">話し合いタイム</div>
+      <div class="clock" id="clock">3:00</div>
+      <p class="center muted" id="talkMsg" style="margin:0">ウルフは誰だ？ 言葉は言わずに話そう</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="pauseBtn" style="flex:1">⏸ 一時停止</button>
+      <button class="btn pink" id="toVoteBtn" style="flex:1">投票へ進む 🗳</button>
+    </div>
+  </section>
+
+  <!-- 投票 -->
+  <section id="vote" class="stack hidden">
+    <div class="card stack center">
+      <span class="label">投票タイム</span>
+      <p style="margin:0">「せーの」でウルフだと思う人を<b>一斉に指差し！</b></p>
+      <div class="count3" id="count3">👉</div>
+      <button class="btn" id="countBtn">3・2・1 カウントする</button>
+    </div>
+    <div class="card stack">
+      <span class="label">いちばん多く指された人をタップ（同数なら話し合って1人に）</span>
+      <div class="vote-grid" id="voteGrid"></div>
+    </div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="result" class="stack hidden">
+    <div class="card stack">
+      <p class="verdict" id="verdict"></p>
+      <p class="center" id="wolfLine" style="margin:0"></p>
+      <div class="words">
+        <div><span class="label">みんなの言葉</span><b id="majWord"></b></div>
+        <div><span class="label">ウルフの言葉</span><b class="wolf" id="minWord"></b></div>
+      </div>
+    </div>
+    <div class="card stack hidden" id="chance">
+      <b>🐺 ウルフの逆転チャンス</b>
+      <p style="margin:0">ウルフはみんなの言葉を当てたら逆転勝利！ 答えを言ってもらってから判定してください。</p>
+      <div class="row">
+        <button class="btn primary" id="hitBtn" style="flex:1">当たった（ウルフ逆転）</button>
+        <button class="btn" id="missBtn" style="flex:1">はずれ（みんなの勝ち）</button>
+      </div>
+    </div>
+    <div class="card stack hidden" id="final">
+      <p class="verdict" id="finalText"></p>
+      <div class="penalty" id="penalty"></div>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="againBtn" style="flex:1">もう一回（同じメンバー）</button>
+      <button class="btn" id="setupBtn" style="flex:1">設定に戻る</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  // [多数派の言葉, 少数派の言葉]
+  const PAIRS = [
+    ['うどん', 'そば'], ['海', 'プール'], ['犬', '猫'], ['ラーメン', 'つけ麺'], ['焼肉', 'しゃぶしゃぶ'],
+    ['カレー', 'シチュー'], ['コーヒー', '紅茶'], ['ビール', 'ハイボール'], ['唐揚げ', '焼き鳥'], ['寿司', '刺身'],
+    ['夏', '冬'], ['朝', '夜'], ['温泉', 'サウナ'], ['ディズニーランド', 'USJ'], ['カラオケ', 'ボウリング'],
+    ['映画館', '水族館'], ['電車', 'バス'], ['飛行機', '新幹線'], ['コンビニ', 'スーパー'], ['マクドナルド', 'モスバーガー'],
+    ['スマホ', 'パソコン'], ['LINE', 'メール'], ['YouTube', 'テレビ'], ['ピザ', 'お好み焼き'], ['たこ焼き', '餃子'],
+    ['チョコレート', 'アイス'], ['ケーキ', 'プリン'], ['りんご', 'みかん'], ['いちご', 'さくらんぼ'], ['サッカー', '野球'],
+    ['テニス', '卓球'], ['キャンプ', 'バーベキュー'], ['お花見', '花火大会'], ['クリスマス', 'お正月'], ['誕生日', '結婚式'],
+    ['遊園地', '動物園'], ['ハワイ', '沖縄'], ['京都', '奈良'], ['北海道', '東北'], ['雨', '雪'],
+    ['枕', '布団'], ['シャワー', 'お風呂'], ['歯ブラシ', 'くし'], ['目覚まし時計', 'スマホのアラーム'], ['傘', 'レインコート'],
+    ['自転車', 'バイク'], ['ペンギン', 'パンダ'], ['ライオン', 'トラ'], ['ハンバーグ', 'ステーキ'], ['味噌汁', 'スープ'],
+    ['おにぎり', 'サンドイッチ'], ['居酒屋', 'ファミレス'], ['日本酒', 'ワイン'], ['ジム', 'ヨガ'], ['漫画', '小説'],
+  ];
+  const PENALTIES = [
+    '好きな食べ物を3つ発表', '最近あった小さな幸せを話す', '右隣の人のいいところを1つ褒める', '一発ギャグ（スベってもOK）',
+    'みんなに飲み物を注いで回る', '次の乾杯の音頭をとる', '子どもの頃の夢を発表', '最近ハマっていることを30秒プレゼン',
+    '語尾に「〜だワン」をつけて次のゲームまで話す', 'モノマネを1つ（誰でもOK）',
+  ];
+
+  const $ = s => document.querySelector(s);
+  const SECTIONS = ['setup', 'deal', 'talk', 'vote', 'result'];
+  let count = 4, wolves = 1, minutes = 3, sound = true;
+  let names = [];
+  let ctx = null;
+  // ゲームごとの状態
+  let players = [], wolfSet = new Set(), maj = '', min = '', dealIdx = 0, lastPair = -1;
+  let endAt = 0, remain = 0, paused = false, timer = 0, countTimer = 0;
+
+  try {
+    sound = localStorage.getItem('nomige-sound') !== 'off';
+    const saved = JSON.parse(localStorage.getItem('nomige-wordwolf') || 'null');
+    if (saved) {
+      count = Math.min(8, Math.max(3, saved.count | 0 || 4));
+      wolves = saved.wolves === 2 && count >= 5 ? 2 : 1;
+      minutes = Math.min(5, Math.max(1, saved.minutes | 0 || 3));
+      if (Array.isArray(saved.names)) names = saved.names.map(n => String(n).slice(0, 12));
+    }
+  } catch (e) { /* 読めなければ初期値 */ }
+
+  function save() {
+    try { localStorage.setItem('nomige-wordwolf', JSON.stringify({ count, wolves, minutes, names })); } catch (e) { /* 保存不可でも動く */ }
+  }
+  function show(id) { SECTIONS.forEach(s => $('#' + s).classList.toggle('hidden', s !== id)); window.scrollTo(0, 0); }
+  const nameOf = i => (names[i] || '').trim() || `プレイヤー${i + 1}`;
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // ---------- 設定画面 ----------
+  function renderSetup() {
+    if (count < 5) wolves = 1;
+    $('#countSeg').innerHTML = [3, 4, 5, 6, 7, 8].map(n => `<button data-n="${n}" class="${n === count ? 'on' : ''}">${n}人</button>`).join('');
+    $('#timeSeg').innerHTML = [1, 2, 3, 4, 5].map(n => `<button data-m="${n}" class="${n === minutes ? 'on' : ''}">${n}分</button>`).join('');
+    document.querySelectorAll('#wolfSeg button').forEach(b => {
+      b.classList.toggle('on', +b.dataset.w === wolves);
+      b.disabled = +b.dataset.w === 2 && count < 5;
+    });
+    const box = $('#names');
+    box.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      const inp = document.createElement('input');
+      inp.className = 'field';
+      inp.maxLength = 12;
+      inp.placeholder = `プレイヤー${i + 1}`;
+      inp.value = names[i] || '';
+      inp.addEventListener('input', () => { names[i] = inp.value; save(); });
+      box.appendChild(inp);
+    }
+    $('#soundBtn').textContent = sound ? '🔊 音あり' : '🔇 音なし';
+    $('#soundBtn').setAttribute('aria-pressed', String(sound));
+  }
+
+  // ---------- 効果音（WebAudio。音声ファイルなし） ----------
+  function audio() {
+    if (!sound) return null;
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function beep(freq, dur, vol, delay = 0) {
+    const a = audio();
+    if (!a) return;
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + delay;
+    o.type = 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + dur);
+  }
+  const timeUpSound = () => { [0, .25, .5].forEach(d => beep(880, .18, .15, d)); beep(1320, .5, .15, .75); };
+
+  // ---------- 配布 ----------
+  function startGame() {
+    audio();
+    clearInterval(timer); clearTimeout(countTimer);
+    let p;
+    do { p = Math.floor(Math.random() * PAIRS.length); } while (p === lastPair);
+    lastPair = p;
+    // どちらが少数派になるかもランダムにして読まれにくくする
+    [maj, min] = Math.random() < .5 ? PAIRS[p] : [PAIRS[p][1], PAIRS[p][0]];
+    players = Array.from({ length: count }, (_, i) => nameOf(i));
+    wolfSet = new Set(shuffle([...players.keys()]).slice(0, wolves));
+    dealIdx = 0;
+    renderDeal();
+    show('deal');
+  }
+  function renderDeal() {
+    $('#word').textContent = '';
+    $('#wordBox').classList.add('hidden');
+    $('#showBtn').classList.remove('hidden');
+    $('#nextBtn').classList.add('hidden');
+    $('#dealProgress').textContent = `${dealIdx + 1} / ${players.length} 人目`;
+    $('#dealName').textContent = `${players[dealIdx]}さんの番です`;
+    $('#dealHint').textContent = '他の人に見えないようにスマホを持ってね';
+  }
+  function revealWord() {
+    $('#word').textContent = wolfSet.has(dealIdx) ? min : maj;
+    $('#wordBox').classList.remove('hidden');
+    $('#dealHint').textContent = 'あなたの言葉はこれ。覚えたら隠そう';
+    $('#showBtn').classList.add('hidden');
+    $('#nextBtn').classList.remove('hidden');
+    $('#nextBtn').textContent = dealIdx === players.length - 1 ? '確認した、話し合いへ 💬' : '確認した、次の人へ 👉';
+  }
+  function nextPlayer() {
+    $('#word').textContent = '';
+    dealIdx++;
+    if (dealIdx < players.length) renderDeal();
+    else startTalk();
+  }
+
+  // ---------- 話し合い ----------
+  function fmt(ms) {
+    const s = Math.ceil(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  }
+  function startTalk() {
+    remain = minutes * 60000;
+    paused = false;
+    endAt = performance.now() + remain;
+    $('#pauseBtn').textContent = '⏸ 一時停止';
+    $('#pauseBtn').disabled = false;
+    $('#talkMsg').textContent = 'ウルフは誰だ？ 言葉は言わずに話そう';
+    $('#clock').classList.remove('paused');
+    show('talk');
+    clearInterval(timer);
+    timer = setInterval(tickTalk, 200);
+    tickTalk();
+  }
+  function tickTalk() {
+    if (!paused) remain = Math.max(0, endAt - performance.now());
+    $('#clock').textContent = fmt(remain);
+    $('#clock').classList.toggle('low', remain <= 10000 && remain > 0 && !paused);
+    if (remain <= 0) {
+      clearInterval(timer);
+      $('#clock').classList.remove('low');
+      $('#talkMsg').textContent = '⏰ 時間切れ！ 投票へ進もう';
+      $('#pauseBtn').disabled = true;
+      timeUpSound();
+      try { if (navigator.vibrate) navigator.vibrate([300, 100, 300]); } catch (e) { /* 振動非対応 */ }
+    }
+  }
+  function togglePause(force) {
+    if (remain <= 0) return;
+    paused = force === undefined ? !paused : force;
+    if (!paused) endAt = performance.now() + remain;
+    $('#pauseBtn').textContent = paused ? '▶ 再開' : '⏸ 一時停止';
+    $('#clock').classList.toggle('paused', paused);
+    tickTalk();
+  }
+
+  // ---------- 投票 ----------
+  function startVote() {
+    clearInterval(timer);
+    $('#count3').textContent = '👉';
+    $('#countBtn').disabled = false;
+    $('#voteGrid').innerHTML = players.map((_, i) => `<button class="btn" data-i="${i}"></button>`).join('');
+    $('#voteGrid').querySelectorAll('button').forEach((b, i) => { b.textContent = players[i]; });
+    show('vote');
+  }
+  function countdown() {
+    audio();
+    $('#countBtn').disabled = true;
+    let n = 3;
+    const step = () => {
+      if (n > 0) { $('#count3').textContent = n; beep(660, .1, .12); n--; countTimer = setTimeout(step, 800); }
+      else { $('#count3').textContent = 'せーの！👉'; beep(1100, .3, .15); $('#countBtn').disabled = false; }
+    };
+    step();
+  }
+
+  // ---------- 結果 ----------
+  function showResult(i) {
+    clearTimeout(countTimer);
+    const caught = wolfSet.has(i);
+    const wolfNames = [...wolfSet].sort((a, b) => a - b).map(w => players[w] + 'さん').join('、');
+    $('#verdict').textContent = caught ? '🎯 ウルフを当てた！' : '😱 ハズレ…';
+    $('#verdict').className = 'verdict' + (caught ? '' : ' wolf');
+    $('#wolfLine').textContent = `${players[i]}さんは${caught ? 'ウルフでした' : 'ウルフではありません'}。ウルフは ${wolfNames}`;
+    $('#majWord').textContent = maj;
+    $('#minWord').textContent = min;
+    $('#chance').classList.toggle('hidden', !caught);
+    if (caught) $('#final').classList.add('hidden');
+    else finish(true);
+    show('result');
+    beep(caught ? 990 : 330, .25, .15);
+  }
+  function finish(wolfWin) {
+    $('#chance').classList.add('hidden');
+    $('#final').classList.remove('hidden');
+    $('#finalText').textContent = wolfWin ? '🐺 ウルフの勝ち！' : '🎉 みんな（多数派）の勝ち！';
+    $('#finalText').className = 'verdict' + (wolfWin ? ' wolf' : '');
+    const losers = wolfWin ? 'ウルフ以外のみんな' : 'ウルフ';
+    $('#penalty').textContent = `罰ゲーム（${losers}から1人）：` + PENALTIES[Math.floor(Math.random() * PENALTIES.length)];
+  }
+
+  // ---------- イベント ----------
+  $('#countSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) { count = +b.dataset.n; renderSetup(); save(); }
+  });
+  $('#wolfSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b && !b.disabled) { wolves = +b.dataset.w; renderSetup(); save(); }
+  });
+  $('#timeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) { minutes = +b.dataset.m; renderSetup(); save(); }
+  });
+  $('#soundBtn').addEventListener('click', () => {
+    sound = !sound;
+    try { localStorage.setItem('nomige-sound', sound ? 'on' : 'off'); } catch (e) { /* 保存不可でも動く */ }
+    renderSetup();
+  });
+  $('#startBtn').addEventListener('click', () => { save(); startGame(); });
+  $('#showBtn').addEventListener('click', revealWord);
+  $('#nextBtn').addEventListener('click', nextPlayer);
+  $('#pauseBtn').addEventListener('click', () => togglePause());
+  $('#toVoteBtn').addEventListener('click', startVote);
+  $('#countBtn').addEventListener('click', countdown);
+  $('#voteGrid').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) showResult(+b.dataset.i);
+  });
+  $('#hitBtn').addEventListener('click', () => finish(true));
+  $('#missBtn').addEventListener('click', () => finish(false));
+  $('#againBtn').addEventListener('click', startGame);
+  $('#setupBtn').addEventListener('click', () => { clearInterval(timer); clearTimeout(countTimer); renderSetup(); show('setup'); });
+  // 画面を離れたら話し合いタイマーを止める
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !$('#talk').classList.contains('hidden') && !paused) togglePause(true);
+  });
+
+  renderSetup();
+})();
+</script>
+</body>
+</html>
