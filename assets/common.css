@@ -1,0 +1,73 @@
+/* のみゲー！ 共通スタイル（全ゲーム共通の色・ボタン・ヘッダー） */
+:root {
+  --bg: #15122b;
+  --bg2: #201b3f;
+  --card: #2a2450;
+  --line: #3d3570;
+  --ink: #f5f2ff;
+  --sub: #b7afd9;
+  --accent: #ffcc33;
+  --accent-ink: #2b1d00;
+  --pink: #ff5c8a;
+  --cyan: #3ee0d0;
+  --green: #5ce07a;
+  --danger: #ff4d4d;
+  --radius: 16px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  background-image: radial-gradient(circle at 20% -10%, #3a2f7a 0, transparent 50%), radial-gradient(circle at 110% 10%, #5a2350 0, transparent 40%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--cyan); }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .4; }
+input, select, textarea { font: inherit; }
+
+/* ヘッダー（各ゲーム上部の「一覧へ戻る」） */
+.g-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; background: #0006; backdrop-filter: blur(6px);
+  position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--line);
+}
+.g-header .back { color: var(--sub); text-decoration: none; font-weight: 700; white-space: nowrap; }
+.g-header .back:hover { color: var(--ink); }
+.g-header h1 { margin: 0; font-size: 1.1rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.g-main { max-width: 720px; margin: 0 auto; padding: 16px 16px 48px; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.stack { display: grid; gap: 12px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.muted { color: var(--sub); }
+.center { text-align: center; }
+
+.btn {
+  border: 2px solid var(--line); background: var(--bg2); color: var(--ink);
+  border-radius: 12px; padding: 10px 16px; font-weight: 700; transition: transform .08s;
+}
+.btn:active:not(:disabled) { transform: scale(.96); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.pink { background: var(--pink); border-color: var(--pink); color: #fff; }
+.btn.big { font-size: 1.25rem; padding: 16px 24px; width: 100%; border-radius: 16px; }
+.btn.small { padding: 4px 10px; font-size: .85rem; border-radius: 8px; }
+
+.field { width: 100%; padding: 10px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--bg2); color: var(--ink); }
+.field:focus { outline: none; border-color: var(--accent); }
+
+.chip { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--bg2); border: 1px solid var(--line); color: var(--sub); font-size: .8rem; }
+
+.note { color: var(--sub); font-size: .82rem; }
+.hidden { display: none !important; }
+
+@media (max-width: 480px) {
+  .g-main { padding: 12px 12px 40px; }
+}

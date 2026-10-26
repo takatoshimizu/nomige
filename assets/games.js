@@ -1,0 +1,24 @@
+// のみゲー！ に載せるゲームの一覧。新しいゲームを追加したらここに1件足す。
+// minPlayers / maxPlayers は絞り込みに使う（上限なしは 99）。
+window.GAMES = [
+  {
+    id: 'bomb',
+    title: '爆弾ゲーム',
+    emoji: '💣',
+    desc: 'お題に沿って答えたらスマホを次の人へ。いつ爆発するかは誰にもわからない！',
+    players: '3人〜', minPlayers: 3, maxPlayers: 99, time: '1回1分',
+    tags: ['スマホ回し', '盛り上がる'],
+    path: 'games/bomb/',
+    color: '#ff5c8a',
+  },
+  {
+    id: 'fibe-derby',
+    title: 'FIBEダービー',
+    emoji: '🏇',
+    desc: '社員の顔をした馬が爆走。誰が1着になるか予想してコインを賭けよう。',
+    players: '1人〜', minPlayers: 1, maxPlayers: 99, time: '1レース30秒',
+    tags: ['みんなで観戦', '運'],
+    path: 'games/fibe-derby/',
+    color: '#5ce07a',
+  },
+];

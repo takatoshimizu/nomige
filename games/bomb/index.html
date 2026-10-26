@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>爆弾ゲーム｜のみゲー！</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💣</text></svg>">
+<link rel="stylesheet" href="../../assets/common.css">
+<style>
+  .topic { font-size: clamp(1.4rem, 6vw, 2rem); font-weight: 900; text-align: center; margin: 4px 0; line-height: 1.35; }
+  .label { color: var(--sub); font-size: .85rem; font-weight: 700; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg button { border: 2px solid var(--line); background: var(--bg2); color: var(--sub); border-radius: 10px; padding: 8px 4px; font-weight: 700; }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .bomb-wrap { display: grid; place-items: center; padding: 24px 0 8px; }
+  .bomb { font-size: 9rem; line-height: 1; user-select: none; animation: pulse 1s infinite ease-in-out; }
+  .bomb.hot { animation-duration: .35s; }
+  @keyframes pulse { 0%, 100% { transform: scale(1) rotate(-4deg); } 50% { transform: scale(1.08) rotate(4deg); } }
+  .passes { text-align: center; color: var(--sub); }
+  .boom {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; text-align: center; padding: 24px;
+    background: radial-gradient(circle, #ffdd55 0, #ff5a1f 35%, #b3001b 75%, #3a0010 100%);
+    animation: shake .5s;
+  }
+  .boom h2 { font-size: clamp(3rem, 18vw, 6rem); margin: 0; color: #fff; text-shadow: 0 4px 0 #0005; letter-spacing: .05em; }
+  .boom .penalty { background: #0007; border-radius: 16px; padding: 14px 18px; margin: 16px auto; max-width: 420px; font-size: 1.15rem; font-weight: 700; }
+  @keyframes shake {
+    0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-12px, 6px); } 40% { transform: translate(10px, -8px); }
+    60% { transform: translate(-8px, -4px); } 80% { transform: translate(6px, 8px); }
+  }
+</style>
+</head>
+<body>
+<header class="g-header">
+  <a class="back" href="../../">← 一覧</a>
+  <h1>💣 爆弾ゲーム</h1>
+  <button class="btn small" id="soundBtn" aria-pressed="true">🔊 音あり</button>
+</header>
+
+<main class="g-main stack">
+  <!-- 準備画面 -->
+  <section id="setup" class="stack">
+    <div class="card stack">
+      <span class="label">お題</span>
+      <div class="topic" id="topic"></div>
+      <div class="row">
+        <button class="btn" id="shuffleBtn">🎲 お題を変える</button>
+        <input class="field" id="customTopic" maxlength="40" placeholder="自分でお題を入力（任意）" style="flex:1;min-width:180px">
+      </div>
+    </div>
+    <div class="card stack">
+      <span class="label">爆発までの時間（毎回ランダム）</span>
+      <div class="seg" id="lengthSeg">
+        <button data-len="short">短め</button>
+        <button data-len="normal" class="on">ふつう</button>
+        <button data-len="long">長め</button>
+      </div>
+    </div>
+    <button class="btn big primary" id="startBtn">点火する 🔥</button>
+    <div class="card note">
+      <b>遊び方</b><br>
+      お題に当てはまる言葉を1つ答えたら、スマホを隣の人へ渡します。爆発したときに持っていた人の負け！
+      同じ答え・詰まって答えられないのもNGです。
+    </div>
+  </section>
+
+  <!-- プレイ中 -->
+  <section id="play" class="stack hidden">
+    <div class="card"><span class="label">お題</span><div class="topic" id="playTopic"></div></div>
+    <div class="bomb-wrap"><div class="bomb" id="bomb" aria-hidden="true">💣</div></div>
+    <button class="btn big pink" id="passBtn">答えた！次の人へ 👉</button>
+    <p class="passes" id="passes">パス 0 回</p>
+  </section>
+</main>
+
+<div class="boom hidden" id="boom" role="alertdialog" aria-labelledby="boomTitle">
+  <div>
+    <h2 id="boomTitle">BOOM!!</h2>
+    <p style="margin:0;font-weight:700">いまスマホを持っている人の負け！</p>
+    <div class="penalty" id="penalty"></div>
+    <div class="row" style="justify-content:center">
+      <button class="btn primary" id="againBtn">もう一回（同じお題）</button>
+      <button class="btn" id="newBtn">お題を変えて遊ぶ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const TOPICS = [
+    '山手線の駅', '赤いもの', 'コンビニで売っているもの', '「〜ラーメン」', 'カタカナ3文字の食べ物', '居酒屋のメニュー',
+    'スポーツの名前', '国の名前', '果物', '動物', 'ジブリ作品', '会社にあるもの', '丸いもの', '冷蔵庫に入っているもの',
+    '「あ」から始まる言葉', 'お寿司のネタ', '日本の都道府県', '野菜', '楽器', 'お菓子の名前', '乗り物', '夏といえば',
+    '冬といえば', '体の部位', '色の名前', '朝ごはんに食べるもの', 'お酒の種類', '鍋の具材', '星座', '文房具',
+    '「〜パン」', 'キャンプで使うもの', '昭和っぽいもの', 'カレーに入れるもの', '映画のタイトル', '虫の名前',
+  ];
+  const PENALTIES = [
+    '好きな食べ物を3つ発表', '最近あった小さな幸せを話す', '右隣の人のいいところを1つ褒める', '一発ギャグ（スベってもOK）',
+    'みんなに飲み物を注いで回る', '変顔で写真を1枚', '次の乾杯の音頭をとる', '子どもの頃の夢を発表',
+    'お水かソフトドリンクを一杯飲む', '語尾に「〜ござる」をつけて次のゲームまで話す', '最近ハマっていることを30秒プレゼン',
+    'モノマネを1つ（誰でもOK）',
+  ];
+  const LENGTHS = { short: [8, 20], normal: [18, 40], long: [35, 70] };
+
+  const $ = s => document.querySelector(s);
+  let topicIdx = Math.floor(Math.random() * TOPICS.length);
+  let len = 'normal';
+  let sound = true;
+  let timer = 0, tickTimer = 0, startAt = 0, fuse = 0, passes = 0;
+  let ctx = null;
+
+  try { sound = localStorage.getItem('nomige-sound') !== 'off'; } catch (e) { sound = true; }
+
+  const currentTopic = () => $('#customTopic').value.trim() || TOPICS[topicIdx];
+
+  function renderSetup() {
+    $('#topic').textContent = currentTopic();
+    document.querySelectorAll('#lengthSeg button').forEach(b => b.classList.toggle('on', b.dataset.len === len));
+    $('#soundBtn').textContent = sound ? '🔊 音あり' : '🔇 音なし';
+    $('#soundBtn').setAttribute('aria-pressed', String(sound));
+  }
+
+  // ---------- 効果音（WebAudio。音声ファイルなし） ----------
+  function audio() {
+    if (!sound) return null;
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function beep(freq, dur, vol) {
+    const a = audio();
+    if (!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g).connect(a.destination);
+    o.start(); o.stop(a.currentTime + dur);
+  }
+  function explosionSound() {
+    const a = audio();
+    if (!a) return;
+    const len = a.sampleRate * 1.2;
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = buf; f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = 0.9;
+    src.connect(f).connect(g).connect(a.destination);
+    src.start();
+  }
+
+  // ---------- 進行 ----------
+  function start() {
+    audio();
+    const [lo, hi] = LENGTHS[len];
+    fuse = (lo + Math.random() * (hi - lo)) * 1000;
+    startAt = performance.now();
+    passes = 0;
+    $('#passes').textContent = 'パス 0 回';
+    $('#playTopic').textContent = currentTopic();
+    $('#setup').classList.add('hidden');
+    $('#play').classList.remove('hidden');
+    $('#boom').classList.add('hidden');
+    $('#bomb').classList.remove('hot');
+    clearTimeout(timer);
+    timer = setTimeout(explode, fuse);
+    tick();
+  }
+  function tick() {
+    const elapsed = performance.now() - startAt;
+    // 残り時間が少ないほど速く鳴らす。ただし揺らぎを入れて正確な残り時間は読ませない
+    const ratio = Math.min(1, elapsed / fuse);
+    const gap = Math.max(160, 900 - ratio * 700 + (Math.random() - 0.5) * 160);
+    $('#bomb').classList.toggle('hot', ratio > 0.6);
+    beep(ratio > 0.6 ? 1200 : 880, 0.06, 0.08);
+    tickTimer = setTimeout(tick, gap);
+  }
+  function explode() {
+    clearTimeout(tickTimer);
+    explosionSound();
+    try { if (navigator.vibrate) navigator.vibrate([400, 100, 400]); } catch (e) { /* 振動非対応 */ }
+    $('#penalty').textContent = '罰ゲーム：' + PENALTIES[Math.floor(Math.random() * PENALTIES.length)];
+    $('#boom').classList.remove('hidden');
+  }
+  function stopAll() { clearTimeout(timer); clearTimeout(tickTimer); }
+
+  $('#shuffleBtn').addEventListener('click', () => {
+    $('#customTopic').value = '';
+    let n;
+    do { n = Math.floor(Math.random() * TOPICS.length); } while (n === topicIdx && TOPICS.length > 1);
+    topicIdx = n;
+    renderSetup();
+  });
+  $('#customTopic').addEventListener('input', renderSetup);
+  $('#lengthSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b) { len = b.dataset.len; renderSetup(); }
+  });
+  $('#soundBtn').addEventListener('click', () => {
+    sound = !sound;
+    try { localStorage.setItem('nomige-sound', sound ? 'on' : 'off'); } catch (e) { /* 保存不可でも動く */ }
+    renderSetup();
+  });
+  $('#startBtn').addEventListener('click', start);
+  $('#passBtn').addEventListener('click', () => {
+    passes++;
+    $('#passes').textContent = `パス ${passes} 回`;
+    beep(520, 0.05, 0.1);
+  });
+  $('#againBtn').addEventListener('click', start);
+  $('#newBtn').addEventListener('click', () => {
+    stopAll();
+    $('#boom').classList.add('hidden');
+    $('#play').classList.add('hidden');
+    $('#setup').classList.remove('hidden');
+    $('#shuffleBtn').click();
+  });
+  // 画面を離れたら止める（裏で爆発しないように）
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && !$('#play').classList.contains('hidden') && $('#boom').classList.contains('hidden')) {
+      stopAll();
+      $('#play').classList.add('hidden');
+      $('#setup').classList.remove('hidden');
+    }
+  });
+
+  renderSetup();
+})();
+</script>
+</body>
+</html>
