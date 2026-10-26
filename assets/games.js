@@ -61,4 +61,14 @@ window.GAMES = [
   path: 'games/ten-seconds/',
   color: '#ff9f43',
   },
+  {
+  id: 'roulette',
+  title: '指名ルーレット',
+  emoji: '🎯',
+  desc: '名前や罰ゲーム、次の一杯の候補を入れてルーレットを回すだけ。誰が当たるかは針しだい！',
+  players: '2人〜', minPlayers: 2, maxPlayers: 99, time: '1回10秒',
+  tags: ['決めごと', '運'],
+  path: 'games/roulette/',
+  color: '#ff5c8a',
+  },
 ];
