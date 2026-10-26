@@ -31,4 +31,14 @@ window.GAMES = [
   path: 'games/king-game/',
   color: '#ffcc33',
   },
+  {
+  id: 'word-wolf',
+  title: 'ワードウルフ',
+  emoji: '🐺',
+  desc: '1人だけ違うお題をもらった「ウルフ」は誰？ 話し合って見つけ出そう。',
+  players: '3〜8人', minPlayers: 3, maxPlayers: 8, time: '1回5分',
+  tags: ['スマホ回し', '会話', '推理'],
+  path: 'games/word-wolf/',
+  color: '#3ee0d0',
+  },
 ];
