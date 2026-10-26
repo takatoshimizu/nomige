@@ -51,4 +51,14 @@ window.GAMES = [
   path: 'games/topic-gacha/',
   color: '#a78bfa',
   },
+  {
+  id: 'ten-seconds',
+  title: '10秒ストップ',
+  emoji: '⏱️',
+  desc: '数字が消えても体内時計でピッタリ10秒を狙え！みんなで回して誰が一番正確か勝負。',
+  players: '1人〜', minPlayers: 1, maxPlayers: 12, time: '1回15秒',
+  tags: ['スマホ回し', '1人でもOK'],
+  path: 'games/ten-seconds/',
+  color: '#ff9f43',
+  },
 ];
