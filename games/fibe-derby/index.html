@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIBEダービー</title>
+<style>
+  :root {
+    --bg: #f6f1e3;
+    --ink: #2b2418;
+    --sub: #6d6250;
+    --green: #1f5a2e;
+    --gold: #e9b52b;
+    --card: #fffdf6;
+    --line: #e0d6bf;
+    --lane-h: 4.6em;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+    font-size: 16px;
+  }
+  button { font: inherit; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: .45; }
+
+  header {
+    background: var(--green);
+    color: #fff;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 1.4rem; letter-spacing: .05em; flex: 1; white-space: nowrap; }
+  header h1 small { font-size: .7rem; font-weight: normal; opacity: .8; margin-left: 6px; }
+  .coins { background: #0003; border-radius: 999px; padding: 4px 12px; font-weight: 700; }
+  .btn {
+    border: 2px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-weight: 700;
+  }
+  header .btn { border-color: #fff; background: transparent; color: #fff; }
+  .btn.primary { background: var(--gold); border-color: #8a6410; color: #2b1d00; }
+
+  main { max-width: 980px; margin: 0 auto; padding: 12px 16px 40px; }
+
+  /* ---------- コース ---------- */
+  #track {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: repeating-linear-gradient(90deg, #3f9b45 0 60px, #48a94e 60px 120px);
+    border: 4px solid #fff;
+    box-shadow: 0 2px 0 #0002, 0 0 0 2px #c9bfa6;
+    font-size: 16px;
+  }
+  .lane { position: relative; height: var(--lane-h); border-bottom: 2px dashed #ffffff66; }
+  .lane:last-child { border-bottom: 0; }
+  .lane-no {
+    position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+    width: 1.4em; height: 1.4em; border-radius: 4px; font-size: .75em; font-weight: 700;
+    display: grid; place-items: center; opacity: .85;
+  }
+  .goal {
+    position: absolute; top: 0; bottom: 0; right: 16px; width: 10px;
+    background: conic-gradient(#111 25%, #fff 0 50%, #111 0 75%, #fff 0) 0 0 / 10px 10px;
+    z-index: 1;
+  }
+  .goal-label {
+    position: absolute; right: 30px; top: 2px; color: #fff; font-weight: 900; font-size: .75rem;
+    text-shadow: 0 1px 2px #0008; z-index: 1;
+  }
+  #track.slowmo { box-shadow: 0 0 0 2px #c9bfa6, inset 0 0 60px #000a; }
+  #track.slowmo::after {
+    content: "SLOW MOTION"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    font-size: 2.2rem; font-weight: 900; color: #fff3; letter-spacing: .2em; pointer-events: none; z-index: 3;
+    white-space: nowrap;
+  }
+
+  /* ---------- 馬 ---------- */
+  .horse {
+    position: absolute; left: 0; top: calc((var(--lane-h) - 4.2em) / 2 + .4em);
+    width: 6.25em; height: 4.2em; z-index: 2; will-change: transform;
+  }
+  .flip, .bob { position: absolute; inset: 0; }
+  .horse.back .flip { transform: scaleX(-1); }
+  .horse-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .face {
+    position: absolute; left: 3.85em; top: -.8em; width: 2.75em; height: 2.75em;
+    border-radius: 50%; overflow: hidden; border: 3px solid #fff; background: #fff;
+    box-shadow: 0 2px 4px #0005;
+  }
+  .face img, .face svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .bubble {
+    position: absolute; left: 4.4em; top: -1.9em; font-size: 1.1em; z-index: 4;
+    filter: drop-shadow(0 1px 1px #0006); pointer-events: none;
+  }
+  .rank-badge {
+    position: absolute; left: -.2em; top: -.6em; background: var(--gold); color: #2b1d00; font-weight: 900;
+    border-radius: 6px; padding: 0 .35em; font-size: .8em; z-index: 4; display: none;
+  }
+  .horse.done .rank-badge { display: block; }
+
+  .leg { transform-box: fill-box; transform-origin: 50% 0; }
+  .tail { transform-box: fill-box; transform-origin: 100% 0; }
+  .running .leg-a { animation: legA .32s infinite alternate ease-in-out; }
+  .running .leg-b { animation: legB .32s infinite alternate ease-in-out; }
+  .running .tail { animation: tail .32s infinite alternate ease-in-out; }
+  .running .bob { animation: bob .32s infinite alternate ease-in-out; }
+  .horse.napping .leg, .horse.napping .bob, .horse.napping .tail { animation: none; }
+  .horse.spin .bob { animation: spin .5s linear infinite; }
+  #track.slowmo .running .leg-a, #track.slowmo .running .leg-b,
+  #track.slowmo .running .tail, #track.slowmo .running .bob { animation-duration: .9s; }
+  @keyframes legA { from { transform: rotate(30deg); } to { transform: rotate(-30deg); } }
+  @keyframes legB { from { transform: rotate(-30deg); } to { transform: rotate(30deg); } }
+  @keyframes tail { from { transform: rotate(-10deg); } to { transform: rotate(14deg); } }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- 実況 ---------- */
+  #commentary {
+    margin-top: 10px; background: #211c14; color: #f3ead2; border-radius: 10px;
+    padding: 10px 14px; min-height: 5.6em; font-size: .95rem; line-height: 1.5;
+  }
+  #commentary .label { color: var(--gold); font-weight: 900; margin-right: 6px; }
+  #commentary p { margin: 0; opacity: .55; }
+  #commentary p:first-child { opacity: 1; font-weight: 700; }
+
+  /* ---------- 出走表 ---------- */
+  #paddock { margin-top: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  #paddock h2 { margin: 0 0 8px; font-size: 1.05rem; }
+  #paddock h2 small { font-weight: normal; color: var(--sub); font-size: .8rem; margin-left: 6px; }
+  .rows { display: grid; gap: 6px; }
+  .row {
+    display: grid; grid-template-columns: auto auto 1fr auto auto; align-items: center; gap: 10px;
+    padding: 6px 10px; border: 2px solid transparent; border-radius: 10px; background: #fff; cursor: pointer;
+  }
+  .row:hover { border-color: var(--line); }
+  .row.sel { border-color: var(--gold); background: #fff7d9; }
+  .row input { position: absolute; opacity: 0; pointer-events: none; }
+  .locked .row { cursor: default; }
+  .waku { width: 1.8em; height: 1.8em; border-radius: 6px; display: grid; place-items: center; font-weight: 900; border: 1px solid #0003; }
+  .pface { width: 2.6em; height: 2.6em; border-radius: 50%; overflow: hidden; border: 2px solid #0002; background: #fff; }
+  .pface img, .pface svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pname { min-width: 0; }
+  .pname b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pname small { color: var(--sub); }
+  .cond { font-size: 1.2rem; font-weight: 900; width: 1.4em; text-align: center; }
+  .odds { font-weight: 900; font-variant-numeric: tabular-nums; min-width: 4.2em; text-align: right; }
+
+  .betbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+  .betbar .amounts { display: flex; gap: 6px; flex-wrap: wrap; }
+  .amt.sel { background: var(--ink); color: #fff; }
+  #startBtn { margin-left: auto; font-size: 1.05rem; padding: 10px 18px; }
+
+  /* ---------- モーダル ---------- */
+  .modal { position: fixed; inset: 0; background: #000a; display: none; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal.open { display: flex; }
+  .sheet {
+    background: var(--card); border-radius: 16px; width: 100%; max-width: 560px; max-height: calc(100vh - 32px);
+    overflow: auto; padding: 18px; box-shadow: 0 10px 40px #0006;
+  }
+  .sheet h2 { margin: 0 0 12px; }
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 10px; margin: 8px 0 14px; }
+  .pod { text-align: center; flex: 1; max-width: 160px; }
+  .pod .pface { margin: 0 auto 6px; width: 4em; height: 4em; }
+  .pod.p1 .pface { width: 6em; height: 6em; border: 4px solid var(--gold); }
+  .pod .stand { border-radius: 8px 8px 0 0; color: #fff; font-weight: 900; padding: 6px 0; margin-top: 6px; }
+  .pod.p1 .stand { background: #c9971c; height: 70px; }
+  .pod.p2 .stand { background: #9aa3ad; height: 48px; }
+  .pod.p3 .stand { background: #b06d3b; height: 34px; }
+  .pod b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pod small { color: var(--sub); }
+  .rest { margin: 0 0 12px; padding-left: 1.6em; color: var(--sub); }
+  .payout { font-size: 1.15rem; font-weight: 900; text-align: center; margin: 10px 0 14px; }
+  .payout.win { color: #b8860b; }
+  .sheet .actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+  .ed-list { display: grid; gap: 8px; margin-bottom: 12px; }
+  .ed-item { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  .ed-item .pface { width: 3.4em; height: 3.4em; }
+  .ed-fields { display: grid; gap: 4px; min-width: 0; }
+  .ed-fields input[type=text] { width: 100%; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; }
+  .ed-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ed-btns .btn { padding: 2px 8px; font-size: .85rem; }
+  .ed-btns label.btn input { display: none; }
+  .note { color: var(--sub); font-size: .82rem; margin: 0 0 12px; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #211c14; color: #fff;
+    padding: 10px 16px; border-radius: 10px; font-weight: 700; z-index: 20; display: none; max-width: calc(100% - 32px);
+  }
+
+  @media (max-width: 640px) {
+    #track { font-size: 12px; }
+    header h1 small { display: none; }
+    .row { gap: 6px; padding: 6px; }
+    #startBtn { width: 100%; margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏇 FIBEダービー<small>社員が走る。誰が勝つ？</small></h1>
+  <span class="coins">🪙 <span id="coins">0</span></span>
+  <button class="btn" id="editBtn">出走メンバー編集</button>
+</header>
+
+<main>
+  <div id="track"></div>
+  <div id="commentary"></div>
+
+  <section id="paddock">
+    <h2>出走表<small>勝つと思う社員を選んでください（単勝）</small></h2>
+    <div class="rows" id="rows"></div>
+    <div class="betbar">
+      <span>賭け金：</span>
+      <div class="amounts" id="amounts"></div>
+      <button class="btn primary" id="startBtn">出走！</button>
+    </div>
+  </section>
+</main>
+
+<div class="modal" id="resultModal"><div class="sheet" id="resultSheet"></div></div>
+<div class="modal" id="editModal"><div class="sheet" id="editSheet"></div></div>
+<div id="toast"></div>
+
+<script src="roster.js"></script>
+<script>
+(() => {
+  'use strict';
+
+  const STORE_KEY = 'fibe-derby-v1';
+  const MAX_RUNNERS = 8;
+  const MAX_ROSTER = 30;
+  const DISTANCE = 100;
+  const START_COINS = 1000;
+  const BET_STEPS = [100, 500, 1000, 'ALL'];
+  // JRAの枠色（白・黒・赤・青・黄・緑・橙・桃）
+  const WAKU = [
+    { bg: '#ffffff', fg: '#222' }, { bg: '#222222', fg: '#fff' }, { bg: '#e53935', fg: '#fff' },
+    { bg: '#1e63d6', fg: '#fff' }, { bg: '#fdd835', fg: '#222' }, { bg: '#2e9d3a', fg: '#fff' },
+    { bg: '#fb8c00', fg: '#fff' }, { bg: '#f48fb1', fg: '#222' },
+  ];
+  const COATS = ['#8d5a2b', '#5b3a1e', '#b0773f', '#3b2a1f', '#c9c2b8', '#7a4a2a'];
+  const EVENTS = [
+    { cls: 'napping', mult: 0, dur: 1.6, icon: '💤', say: n => `おっと${n}、走りながら居眠りだ！` },
+    { cls: '', mult: 2.0, dur: 1.2, icon: '⚡', say: n => `${n}、締め切り前の本気ダッシュ！！` },
+    { cls: 'back', mult: -0.5, dur: 0.9, icon: '↩️', say: n => `${n}、忘れ物を取りにまさかの逆走！` },
+    { cls: 'napping', mult: 0.15, dur: 1.3, icon: '📞', say: n => `${n}に上司から着信！立ち止まって対応中！` },
+    { cls: '', mult: 1.6, dur: 1.6, icon: '☕', say: n => `${n}、コーヒーをキメて覚醒！` },
+    { cls: 'spin', mult: 0.3, dur: 1.0, icon: '🌀', say: n => `${n}、なぜかその場で回転！` },
+    { cls: '', mult: 1.4, dur: 1.5, icon: '🍱', say: n => `${n}、昼休みのチャイムが聞こえて加速！` },
+  ];
+
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function hashStr(s) {
+    let h = 2166136261;
+    for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function mulberry32(a) {
+    return () => {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  // ---------- 仮の顔（写真がないとき） ----------
+  function faceSVG(seed) {
+    const r = mulberry32(hashStr(seed));
+    const skin = pick(r, ['#f9d7b5', '#f1c27d', '#e0ac69', '#ffdbac', '#d9a066']);
+    const hair = pick(r, ['#222', '#4a3020', '#7a4b2a', '#8a8a8a', '#d9a441', '#a33']);
+    const hairStyle = Math.floor(r() * 4), eyes = Math.floor(r() * 4), mouth = Math.floor(r() * 4);
+    const glasses = r() < 0.3, blush = r() < 0.5;
+    let s = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#cfe8ff"/>`;
+    s += `<circle cx="50" cy="54" r="42" fill="${skin}"/>`;
+    s += [
+      `<path d="M8 50 Q10 8 50 8 Q90 8 92 50 Q80 28 50 26 Q22 28 8 50Z" fill="${hair}"/>`,
+      `<path d="M10 48 L14 16 L28 30 L36 6 L48 26 L58 4 L66 26 L80 8 L84 32 L92 46 Q78 28 50 28 Q24 28 10 48Z" fill="${hair}"/>`,
+      `<path d="M8 58 Q8 40 16 32 L20 52Z M92 58 Q92 40 84 32 L80 52Z" fill="${hair}"/><ellipse cx="38" cy="22" rx="10" ry="4" fill="#fff" opacity=".5"/>`,
+      `<path d="M7 56 Q4 10 50 8 Q96 10 93 56 L88 42 Q70 32 60 20 Q40 36 12 40Z" fill="${hair}"/>`,
+    ][hairStyle];
+    s += [
+      `<circle cx="35" cy="54" r="5" fill="#222"/><circle cx="65" cy="54" r="5" fill="#222"/>`,
+      `<path d="M28 56 Q35 47 42 56 M58 56 Q65 47 72 56" stroke="#222" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      `<circle cx="35" cy="54" r="9" fill="#fff"/><circle cx="65" cy="54" r="9" fill="#fff"/><circle cx="36" cy="55" r="5" fill="#222"/><circle cx="64" cy="55" r="5" fill="#222"/><circle cx="38" cy="53" r="1.6" fill="#fff"/><circle cx="66" cy="53" r="1.6" fill="#fff"/>`,
+      `<path d="M28 54 H42 M58 54 H72" stroke="#222" stroke-width="4" stroke-linecap="round"/>`,
+    ][eyes];
+    if (glasses) s += `<g fill="none" stroke="#333" stroke-width="3"><circle cx="35" cy="54" r="11"/><circle cx="65" cy="54" r="11"/><path d="M46 54 H54"/></g>`;
+    if (blush) s += `<ellipse cx="23" cy="68" rx="7" ry="4" fill="#ff6b6b" opacity=".45"/><ellipse cx="77" cy="68" rx="7" ry="4" fill="#ff6b6b" opacity=".45"/>`;
+    s += `<path d="M50 60 Q45 68 52 68" stroke="#0005" stroke-width="3" fill="none" stroke-linecap="round"/>`;
+    s += [
+      `<path d="M38 74 Q50 86 62 74" stroke="#222" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+      `<ellipse cx="50" cy="78" rx="6" ry="8" fill="#5a1f1f"/>`,
+      `<path d="M40 78 H60" stroke="#222" stroke-width="4" stroke-linecap="round"/>`,
+      `<path d="M35 72 Q50 92 65 72Z" fill="#5a1f1f"/><path d="M37 72 H63 L61 77 H39Z" fill="#fff"/>`,
+    ][mouth];
+    return s + '</svg>';
+  }
+  const faceHTML = m => m.photo ? `<img src="${esc(m.photo)}" alt="">` : faceSVG(m.id);
+
+  function horseSVG(coat, waku, num) {
+    const leg = (x, cls, far) => `<g class="leg ${cls}"><rect x="${x}" y="46" width="7" height="28" rx="3" fill="${coat}"/>${far ? `<rect x="${x}" y="46" width="7" height="28" rx="3" fill="#000" opacity=".25"/>` : ''}<rect x="${x - 1}" y="70" width="9" height="5" rx="2" fill="#222"/></g>`;
+    return `<svg class="horse-svg" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+      <path class="tail" d="M20 34 Q4 36 2 58" stroke="#2a1a10" stroke-width="6" fill="none" stroke-linecap="round"/>
+      ${leg(30, 'leg-b', true)}${leg(62, 'leg-a', true)}
+      <ellipse cx="48" cy="42" rx="32" ry="15" fill="${coat}"/>
+      <path d="M66 36 L86 12 L100 20 L80 50Z" fill="${coat}"/>
+      <path d="M70 30 L85 11" stroke="#2a1a10" stroke-width="5" stroke-linecap="round"/>
+      <rect x="35" y="30" width="26" height="18" rx="2" fill="${waku.bg}" stroke="#0004"/>
+      <text x="48" y="44" font-size="13" font-weight="700" text-anchor="middle" fill="${waku.fg}" font-family="sans-serif">${num}</text>
+      ${leg(22, 'leg-a', false)}${leg(70, 'leg-b', false)}
+    </svg>`;
+  }
+
+  // ---------- 保存 ----------
+  function defaultRoster() {
+    // roster.js が読めない環境でも遊べるように最低限の仮メンバーを用意する
+    const src = Array.isArray(window.FIBE_ROSTER) && window.FIBE_ROSTER.length >= 2
+      ? window.FIBE_ROSTER
+      : ['社員A', '社員B', '社員C', '社員D'].map(name => ({ name }));
+    return src.map((m, i) => ({
+      id: 'd' + i + '-' + hashStr(m.name), name: String(m.name || `社員${i + 1}`), catch: String(m.catch || ''), photo: String(m.photo || ''),
+    }));
+  }
+  function loadStore() {
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { d = null; }
+    const out = { coins: START_COINS, rosterEdited: false, roster: null };
+    if (d && typeof d.coins === 'number' && isFinite(d.coins)) out.coins = d.coins;
+    if (d && d.rosterEdited && Array.isArray(d.roster) && d.roster.length >= 2) { out.rosterEdited = true; out.roster = d.roster; }
+    return out;
+  }
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); return true; }
+    catch (e) { toast('保存できませんでした（ブラウザの保存領域が足りない可能性があります）'); return false; }
+  }
+  const roster = () => store.rosterEdited && store.roster ? store.roster : defaultRoster();
+
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg; t.style.display = 'block';
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
+  // ---------- 状態 ----------
+  const store = loadStore();
+  let race = null;
+  let selected = null;
+  let bet = 100;
+  let rafId = 0;
+
+  function condMark(stat) {
+    if (stat > 0.8) return '◎';
+    if (stat > 0.6) return '○';
+    if (stat > 0.4) return '▲';
+    if (stat > 0.2) return '△';
+    return '×';
+  }
+
+  function newCard() {
+    cancelAnimationFrame(rafId);
+    if (store.coins < 100) {
+      store.coins = START_COINS; save();
+      toast('コインが尽きたので、社長から温情の1000コインが支給されました');
+    }
+    let members = roster();
+    if (members.length > MAX_RUNNERS) members = shuffle(members).slice(0, MAX_RUNNERS);
+    const horses = members.map((m, i) => ({
+      id: m.id, name: m.name, catch: m.catch, photo: m.photo,
+      num: i + 1, waku: WAKU[i % WAKU.length], coat: pick(Math.random, COATS),
+      stat: Math.random(), kick: Math.random(), pos: 0, burst: 0,
+      ev: null, evLeft: 0, evCount: 0, late: 0, done: false, time: null, el: null,
+    }));
+    // 同じ走行モデルで裏レースを繰り返し、実際の勝率に近いオッズを付ける
+    const wins = simulateWins(horses, 400);
+    horses.forEach((h, i) => {
+      const p = (wins[i] + 0.5) / (400 + horses.length * 0.5);
+      h.odds = clamp(Math.round(0.8 / p * 10) / 10, 1.1, 999.9);
+    });
+    race = { horses, phase: 'paddock', t: 0, leaderId: null, lastLeaderSay: -9, said: {}, slow: false, slowDone: false, order: [], endAt: null, bet: 0, pickId: null };
+    selected = null;
+    renderTrack(); renderPaddock(); renderCoins();
+    setCommentary(['本日のFIBEダービー、まもなく出走です！', '勝つと思う社員を選んで「出走！」を押してください。']);
+  }
+
+  // ---------- 描画 ----------
+  function renderCoins() { $('#coins').textContent = store.coins.toLocaleString(); }
+
+  function renderTrack() {
+    const track = $('#track');
+    track.classList.remove('slowmo');
+    track.innerHTML = race.horses.map(h => `
+      <div class="lane">
+        <span class="lane-no" style="background:${h.waku.bg};color:${h.waku.fg}">${h.num}</span>
+        <div class="horse" data-id="${esc(h.id)}">
+          <div class="flip"><div class="bob">${horseSVG(h.coat, h.waku, h.num)}<div class="face" style="border-color:${h.waku.bg === '#ffffff' ? '#ddd' : h.waku.bg}">${faceHTML(h)}</div></div></div>
+          <span class="bubble"></span><span class="rank-badge"></span>
+        </div>
+      </div>`).join('') + '<div class="goal"></div><span class="goal-label">GOAL</span>';
+    track.querySelectorAll('.horse').forEach((el, i) => { race.horses[i].el = el; });
+    layout();
+    race.horses.forEach(placeHorse);
+  }
+
+  let geo = { startX: 22, span: 300 };
+  function layout() {
+    const track = $('#track');
+    const any = track.querySelector('.horse');
+    if (!any) return;
+    const face = any.querySelector('.face');
+    const nose = face.offsetLeft + face.offsetWidth;
+    const goalX = track.clientWidth - 16 - 10;
+    const startX = track.clientWidth < 500 ? 16 : 22;
+    geo = { startX, span: Math.max(40, goalX - nose - startX) };
+  }
+  function placeHorse(h) {
+    const x = geo.startX + clamp(h.pos, -6, DISTANCE) / DISTANCE * geo.span;
+    h.el.style.transform = `translateX(${x}px)`;
+  }
+
+  function renderPaddock() {
+    const locked = race.phase !== 'paddock';
+    $('#paddock').classList.toggle('locked', locked);
+    $('#rows').innerHTML = race.horses.map(h => `
+      <label class="row ${selected === h.id ? 'sel' : ''}">
+        <input type="radio" name="pick" value="${esc(h.id)}" ${selected === h.id ? 'checked' : ''} ${locked ? 'disabled' : ''}>
+        <span class="waku" style="background:${h.waku.bg};color:${h.waku.fg}">${h.num}</span>
+        <span class="pface">${faceHTML(h)}</span>
+        <span class="pname"><b>${esc(h.name)}</b><small>${esc(h.catch)}</small></span>
+        <span class="cond" title="調子">${condMark(h.stat)}</span>
+        <span class="odds">${h.odds.toFixed(1)}倍</span>
+      </label>`).join('');
+    $('#amounts').innerHTML = BET_STEPS.map(v => {
+      const val = v === 'ALL' ? store.coins : v;
+      const dis = locked || val > store.coins || val <= 0;
+      return `<button class="btn amt ${bet === v ? 'sel' : ''}" data-v="${v}" ${dis ? 'disabled' : ''}>${v === 'ALL' ? '全額' : v.toLocaleString()}</button>`;
+    }).join('');
+    updateStartBtn();
+  }
+  function betValue() { return bet === 'ALL' ? store.coins : Math.min(bet, store.coins); }
+  function updateStartBtn() {
+    const b = $('#startBtn');
+    b.disabled = race.phase !== 'paddock';
+    const h = race.horses.find(x => x.id === selected);
+    b.textContent = h ? `${h.name}に${betValue().toLocaleString()}コイン賭けて出走！` : '賭けずに観戦して出走';
+    $('#editBtn').disabled = race.phase === 'running';
+  }
+
+  let lines = [];
+  function setCommentary(arr) { lines = arr.slice().reverse(); drawCommentary(); }
+  function say(text) { lines.unshift(text); lines = lines.slice(0, 4); drawCommentary(); }
+  function drawCommentary() {
+    $('#commentary').innerHTML = lines.map((l, i) => `<p>${i === 0 ? '<span class="label">実況</span>' : ''}${esc(l)}</p>`).join('');
+  }
+
+  // ---------- レース ----------
+  function startRace() {
+    if (race.phase !== 'paddock') return;
+    if (selected) {
+      race.bet = betValue(); race.pickId = selected;
+      store.coins -= race.bet; save(); renderCoins();
+    }
+    race.phase = 'running';
+    renderPaddock();
+    $('#track').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const late = [];
+    race.horses.forEach(h => {
+      h.el.classList.add('running');
+      if (Math.random() < 0.15) { h.late = 0.4 + Math.random() * 0.8; late.push(h.name); }
+    });
+    say('各馬いっせいにスタート！');
+    if (late.length) setTimeout(() => say(`${late.join('、')}、出遅れた！`), 350);
+    let last = performance.now();
+    const loop = now => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      step(dt * (race.slow ? 0.35 : 1));
+      race.horses.forEach(placeHorse);
+      if (race.phase === 'running') rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function setEvent(h, ev) {
+    h.ev = ev; h.evLeft = ev ? ev.dur : 0;
+    h.el.classList.remove('napping', 'back', 'spin');
+    if (ev && ev.cls) h.el.classList.add(ev.cls);
+    h.el.querySelector('.bubble').textContent = ev ? ev.icon : '';
+  }
+
+  // 1頭の瞬間速度（本番レースとオッズ計算の両方で使う）
+  function speedOf(h, t, dt) {
+    h.burst = clamp(h.burst + (Math.random() - 0.5) * dt * 6, -1.5, 1.5);
+    let v = 6.4 + h.stat * 1.2 + h.burst + (h.pos > 70 ? h.kick * 1.4 : 0);
+    if (h.ev) v *= h.ev.mult;
+    if (t < h.late) v = 0;
+    return v;
+  }
+
+  function simulateWins(horses, n) {
+    const wins = horses.map(() => 0);
+    const dt = 0.05;
+    for (let k = 0; k < n; k++) {
+      const hs = horses.map(h => ({ stat: h.stat, kick: h.kick, pos: 0, burst: 0, ev: null, evLeft: 0, evCount: 0, late: Math.random() < 0.15 ? 0.4 + Math.random() * 0.8 : 0 }));
+      let t = 0, winner = -1;
+      while (winner < 0 && t < 30) {
+        t += dt;
+        let best = -1, bestOver = -1;
+        hs.forEach((h, i) => {
+          if (h.ev) { h.evLeft -= dt; if (h.evLeft <= 0) h.ev = null; }
+          else if (t > 1 && h.evCount < 2 && h.pos < 96 && Math.random() < 0.07 * dt) { h.ev = EVENTS[Math.floor(Math.random() * EVENTS.length)]; h.evLeft = h.ev.dur; h.evCount++; }
+          h.pos += speedOf(h, t, dt) * dt;
+          if (h.pos >= DISTANCE && h.pos - DISTANCE > bestOver) { best = i; bestOver = h.pos - DISTANCE; }
+        });
+        winner = best;
+      }
+      if (winner < 0) winner = hs.reduce((bi, h, i) => h.pos > hs[bi].pos ? i : bi, 0);
+      wins[winner]++;
+    }
+    return wins;
+  }
+
+  function step(dt) {
+    race.t += dt;
+    for (const h of race.horses) {
+      if (h.done) continue;
+      if (h.ev) {
+        h.evLeft -= dt;
+        if (h.evLeft <= 0) setEvent(h, null);
+      } else if (race.t > 1 && h.evCount < 2 && h.pos < 96 && Math.random() < 0.07 * dt) {
+        const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+        h.evCount++; setEvent(h, ev); say(ev.say(h.name));
+      }
+      const v = speedOf(h, race.t, dt);
+      const prev = h.pos;
+      h.pos += v * dt;
+      if (h.pos >= DISTANCE) {
+        const frac = (DISTANCE - prev) / (h.pos - prev);
+        h.time = race.t - dt + dt * frac;
+        h.pos = DISTANCE; h.done = true;
+        setEvent(h, null);
+        h.el.classList.remove('running'); h.el.classList.add('done');
+        race.order.push(h);
+        onFinish(h);
+      }
+    }
+    commentate();
+    const allDone = race.horses.every(h => h.done);
+    if (race.endAt === null && (allDone || race.t > 30)) race.endAt = race.t + 0.8;
+    if (race.endAt !== null && race.t >= race.endAt) endRace();
+  }
+
+  function commentate() {
+    const running = race.horses.slice().sort((a, b) => b.pos - a.pos);
+    const lead = running[0], second = running[1];
+    if (race.order.length) return;
+    if (lead.id !== race.leaderId && race.t - race.lastLeaderSay > 1.5 && race.t > 1.2) {
+      race.leaderId = lead.id; race.lastLeaderSay = race.t;
+      say(`先頭は${lead.name}！`);
+    }
+    if (!race.said.half && lead.pos > 50) { race.said.half = true; say(`折り返し！先頭${lead.name}、2番手に${second.name}！`); }
+    if (!race.said.last && lead.pos > 75) { race.said.last = true; say('最後の直線に入った！'); }
+    if (!race.slowDone && !race.slow && lead.pos > 88 && second && second.pos > lead.pos - 5) {
+      race.slow = true; $('#track').classList.add('slowmo');
+      say(`${lead.name}と${second.name}の大接戦！スローモーションでお送りします！`);
+    }
+  }
+
+  function onFinish(h) {
+    if (race.order.length === 1) {
+      say(`${h.name}、いま先頭でゴールイン！！`);
+      race.slow = false; race.slowDone = true; $('#track').classList.remove('slowmo');
+    }
+  }
+
+  function finalOrder() {
+    const done = race.horses.filter(h => h.done).sort((a, b) => a.time - b.time);
+    const rest = race.horses.filter(h => !h.done).sort((a, b) => b.pos - a.pos);
+    return done.concat(rest);
+  }
+
+  function endRace() {
+    race.phase = 'result';
+    cancelAnimationFrame(rafId);
+    race.slow = false; $('#track').classList.remove('slowmo');
+    const order = finalOrder();
+    order.forEach((h, i) => {
+      h.el.classList.remove('running', 'napping', 'back', 'spin');
+      h.el.classList.add('done');
+      h.el.querySelector('.rank-badge').textContent = `${i + 1}着`;
+    });
+    const winner = order[0];
+    let payoutHTML;
+    if (!race.pickId) {
+      payoutHTML = '<p class="payout">今回は観戦のみでした</p>';
+    } else if (race.pickId === winner.id) {
+      const win = Math.floor(race.bet * winner.odds);
+      store.coins += win;
+      payoutHTML = `<p class="payout win">🎉 的中！ ${winner.odds.toFixed(1)}倍で +${win.toLocaleString()} コイン</p>`;
+    } else {
+      const mine = order.findIndex(h => h.id === race.pickId);
+      payoutHTML = `<p class="payout">ハズレ… ${esc(order[mine].name)}は${mine + 1}着でした（-${race.bet.toLocaleString()} コイン）</p>`;
+    }
+    save(); renderCoins(); renderPaddock();
+    const tm = h => h.done ? `${h.time.toFixed(2)}秒` : '完走できず';
+    const pod = (h, rank) => h ? `<div class="pod p${rank}"><div class="pface">${faceHTML(h)}</div><b>${esc(h.name)}</b><small>${tm(h)}</small><div class="stand">${rank}着</div></div>` : '';
+    $('#resultSheet').innerHTML = `
+      <h2>🏁 レース結果</h2>
+      <div class="podium">${pod(order[1], 2)}${pod(order[0], 1)}${pod(order[2], 3)}</div>
+      ${order.length > 3 ? `<ol class="rest" start="4">${order.slice(3).map(h => `<li>${esc(h.name)}（${tm(h)}）</li>`).join('')}</ol>` : ''}
+      ${payoutHTML}
+      <div class="actions"><button class="btn" id="closeResult">コースを見る</button><button class="btn primary" id="nextRace">次のレースへ</button></div>`;
+    $('#resultModal').classList.add('open');
+    say(`優勝は${winner.name}！おめでとう！`);
+    $('#startBtn').disabled = false;
+    $('#startBtn').textContent = '次のレースへ';
+  }
+
+  // ---------- メンバー編集 ----------
+  let draft = [];
+  let draftIsDefault = false;
+  function openEditor() {
+    if (race.phase === 'running') return;
+    draft = roster().map(m => ({ ...m }));
+    draftIsDefault = !store.rosterEdited;
+    renderEditor();
+    $('#editModal').classList.add('open');
+  }
+  function renderEditor() {
+    $('#editSheet').innerHTML = `
+      <h2>出走メンバー編集</h2>
+      <p class="note">写真はこのブラウザ内にだけ保存され、外部には送信されません。1レースの出走は最大${MAX_RUNNERS}頭（多いときはランダムに選出）。</p>
+      <div class="ed-list">${draft.map((m, i) => `
+        <div class="ed-item" data-i="${i}">
+          <span class="pface">${faceHTML(m)}</span>
+          <div class="ed-fields">
+            <input type="text" class="ed-name" value="${esc(m.name)}" maxlength="16" placeholder="名前">
+            <input type="text" class="ed-catch" value="${esc(m.catch)}" maxlength="20" placeholder="キャッチコピー（任意）">
+            <div class="ed-btns">
+              <label class="btn">写真を選ぶ<input type="file" accept="image/*" class="ed-photo"></label>
+              ${m.photo ? '<button class="btn ed-unphoto">写真を外す</button>' : ''}
+              <button class="btn ed-del" ${draft.length <= 2 ? 'disabled' : ''}>削除</button>
+            </div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="actions">
+        <button class="btn" id="edReset">初期メンバーに戻す</button>
+        <button class="btn" id="edAdd" ${draft.length >= MAX_ROSTER ? 'disabled' : ''}>＋ 社員を追加</button>
+        <button class="btn" id="edCancel">キャンセル</button>
+        <button class="btn primary" id="edSave">保存</button>
+      </div>`;
+  }
+  function syncDraftText() {
+    document.querySelectorAll('.ed-item').forEach(el => {
+      const m = draft[+el.dataset.i];
+      m.name = el.querySelector('.ed-name').value;
+      m.catch = el.querySelector('.ed-catch').value;
+    });
+  }
+  function readPhoto(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = reject;
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const S = 160, m = Math.min(img.width, img.height);
+          const c = document.createElement('canvas');
+          c.width = c.height = S;
+          // 縦長の写真は顔が上寄りのことが多いので、少し上を切り抜く
+          c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) * 0.3, m, m, 0, 0, S, S);
+          resolve(c.toDataURL('image/jpeg', 0.85));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  $('#editSheet').addEventListener('click', e => {
+    const item = e.target.closest('.ed-item');
+    if (e.target.closest('.ed-del') && item) { syncDraftText(); draft.splice(+item.dataset.i, 1); draftIsDefault = false; renderEditor(); }
+    else if (e.target.closest('.ed-unphoto') && item) { syncDraftText(); draft[+item.dataset.i].photo = ''; draftIsDefault = false; renderEditor(); }
+    else if (e.target.id === 'edAdd') {
+      syncDraftText();
+      draft.push({ id: 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36), name: `社員${draft.length + 1}`, catch: '', photo: '' });
+      draftIsDefault = false; renderEditor();
+    }
+    else if (e.target.id === 'edReset') { draft = defaultRoster(); draftIsDefault = true; renderEditor(); }
+    else if (e.target.id === 'edCancel') { $('#editModal').classList.remove('open'); }
+    else if (e.target.id === 'edSave') {
+      syncDraftText();
+      draft.forEach((m, i) => { m.name = m.name.trim() || `社員${i + 1}`; m.catch = m.catch.trim(); });
+      if (draftIsDefault) { store.rosterEdited = false; store.roster = null; }
+      else { store.rosterEdited = true; store.roster = draft; }
+      if (!save()) return;
+      $('#editModal').classList.remove('open');
+      newCard();
+      toast('出走メンバーを保存しました');
+    }
+  });
+  $('#editSheet').addEventListener('input', () => { draftIsDefault = false; });
+  $('#editSheet').addEventListener('change', async e => {
+    if (!e.target.classList.contains('ed-photo')) return;
+    const item = e.target.closest('.ed-item');
+    const file = e.target.files && e.target.files[0];
+    if (!file || !item) return;
+    try {
+      syncDraftText();
+      draft[+item.dataset.i].photo = await readPhoto(file);
+      draftIsDefault = false; renderEditor();
+    } catch (err) { toast('この画像は読み込めませんでした'); }
+  });
+
+  // ---------- 操作 ----------
+  $('#rows').addEventListener('change', e => {
+    if (race.phase !== 'paddock' || e.target.name !== 'pick') return;
+    selected = selected === e.target.value ? null : e.target.value;
+    renderPaddock();
+  });
+  $('#rows').addEventListener('click', e => {
+    // 選択中の行をもう一度押したら選択解除
+    const row = e.target.closest('.row');
+    if (!row || race.phase !== 'paddock') return;
+    const input = row.querySelector('input');
+    if (input.value === selected && e.target === input) { selected = null; renderPaddock(); }
+  });
+  $('#amounts').addEventListener('click', e => {
+    const b = e.target.closest('.amt');
+    if (!b || b.disabled) return;
+    bet = b.dataset.v === 'ALL' ? 'ALL' : +b.dataset.v;
+    renderPaddock();
+  });
+  $('#startBtn').addEventListener('click', () => {
+    if (race.phase === 'result') { $('#resultModal').classList.remove('open'); newCard(); }
+    else startRace();
+  });
+  $('#resultModal').addEventListener('click', e => {
+    if (e.target.id === 'nextRace') { $('#resultModal').classList.remove('open'); newCard(); }
+    else if (e.target.id === 'closeResult' || e.target.id === 'resultModal') $('#resultModal').classList.remove('open');
+  });
+  $('#editBtn').addEventListener('click', openEditor);
+  window.addEventListener('resize', () => { if (race) { layout(); race.horses.forEach(placeHorse); } });
+
+  newCard();
+})();
+</script>
+</body>
+</html>

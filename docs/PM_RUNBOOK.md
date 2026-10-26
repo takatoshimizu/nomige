@@ -155,7 +155,7 @@ Issue・PRのURLと、実際のマージ状況。
 - remote / GitHub: 未設定（gh は認証済みだが、GitHubリポジトリは未作成。作成・公開範囲の決定はユーザー確認事項）
 - そのためPR・CIは現時点で存在しない。GitHub設定までは、作業ブランチで実装・ローカル検証し、PMがローカルで `main` へ統合する（「CIなし・PRなし」と明記して報告）。
 - 技術構成: 各ゲームはビルド不要の静的HTML/JS。`games/<ゲーム名>/index.html` に配置。
-- 起動方法: 対象の `index.html` をブラウザで直接開く。
-- 検証方法: ブラウザで表示し主要操作を確認（自動テスト・CIなし）。
+- 起動方法: 対象の `index.html` をブラウザで直接開く。Claudeのプレビューでは `.claude/launch.json` の `static`（npx http-server、ポート8765）を使い `http://localhost:8765/games/<ゲーム名>/` を開く（data: スナップショットでは隣接JSが読めないため）。
+- 検証方法: ブラウザで表示し主要操作を確認（自動テスト・CIなし）。スマホ幅（375px）も確認する。
 - デプロイ: なし（公開先未設定。初めての一般公開はユーザー確認事項）
 - 状態メモ: `git rev-parse --path-format=absolute --git-common-dir` で得たディレクトリ内の `pm/state.md`（現状は `C:\くそげー制作\.git\pm\state.md`。commitされない）
