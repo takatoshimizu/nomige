@@ -160,5 +160,4 @@ Issue・PRのURLと、実際のマージ状況。
 - 技術構成: ビルド不要の静的HTML/JS。トップ `index.html` がゲーム一覧、一覧データは `assets/games.js`、共通スタイルは `assets/common.css`。各ゲームは `games/<ゲーム名>/index.html`。
 - 起動方法: 対象の `index.html` をブラウザで直接開く。Claudeのプレビューでは `.claude/launch.json` の `static`（npx http-server、ポート8765）を使い `http://localhost:8765/games/<ゲーム名>/` を開く（data: スナップショットでは隣接JSが読めないため）。
 - 検証方法: ブラウザで表示し主要操作を確認（自動テスト・CIなし）。スマホ幅（375px）も確認する。
-- デプロイ: なし（公開先未設定。初めての一般公開はユーザー確認事項）
 - 状態メモ: `git rev-parse --path-format=absolute --git-common-dir` で得たディレクトリ内の `pm/state.md`（現状は `C:\くそげー制作\.git\pm\state.md`。commitされない）
