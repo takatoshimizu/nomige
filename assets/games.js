@@ -71,4 +71,14 @@ window.GAMES = [
   path: 'games/roulette/',
   color: '#ff5c8a',
   },
+  {
+  id: 'oripa',
+  title: 'どっきりオリパ',
+  emoji: '🃏',
+  desc: 'オンラインオリパ風ガチャで「神引き」を演出。ロゴ5連打の仕込み設定で大当たりを確定させて、友だちをだまそう。',
+  players: '1人〜', minPlayers: 1, maxPlayers: 99, time: '1回30秒',
+  tags: ['どっきり', '盛り上がる'],
+  path: 'games/oripa/',
+  color: '#ffd23f',
+  },
 ];

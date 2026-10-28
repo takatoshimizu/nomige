@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ORIPA★STAR | オンラインオリパ</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<style>
+:root{--bg:#0d0f1f;--panel:#171a33;--line:#2a2f57;--ink:#fff;--sub:#a3a8d1;--gold:#ffd23f;--pink:#ff3d8b;--cyan:#22d3ee}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Meiryo",system-ui,sans-serif;line-height:1.5;min-height:100vh;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+body.lock{overflow:hidden}
+button{font:inherit;cursor:pointer}
+input,select{font:inherit}
+.hidden{display:none!important}
+
+/* ヘッダー */
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:6px;padding:10px 12px;background:#0d0f1fee;backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.logo{font-weight:900;font-size:1.25rem;letter-spacing:.02em;background:linear-gradient(90deg,#ffd23f,#ff3d8b,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;-webkit-user-select:none;cursor:pointer;white-space:nowrap}
+.icon-btn{background:none;border:0;color:var(--sub);font-size:1.1rem;padding:4px}
+.pts{margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 3px 3px 10px;font-weight:800;white-space:nowrap;font-size:.92rem}
+.pts button{border:0;border-radius:999px;background:var(--pink);color:#fff;font-weight:800;padding:4px 10px;font-size:.78rem}
+.ticker{overflow:hidden;white-space:nowrap;background:linear-gradient(90deg,#3b0a2a,#1a1040);font-size:.8rem;padding:6px 0;border-bottom:1px solid var(--line)}
+.ticker span{display:inline-block;padding-left:100%;animation:tick 40s linear infinite}
+@keyframes tick{to{transform:translateX(-100%)}}
+
+main{max-width:760px;margin:0 auto;padding:14px 14px 40px}
+.sec-title{font-size:1.05rem;margin:6px 0 12px;font-weight:900}
+.packs{display:grid;gap:14px}
+@media (min-width:700px){.packs{grid-template-columns:1fr 1fr}.packs .pack-card:first-child{grid-column:1/-1}}
+.pack-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.banner{position:relative;height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.banner::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#ffffff22 45%,transparent 60%);background-size:300% 100%;animation:shine 3.5s linear infinite;pointer-events:none}
+.banner .label{position:absolute;left:10px;top:10px;background:#000a;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:800;z-index:3}
+.banner .lastone{position:absolute;right:10px;bottom:10px;background:var(--gold);color:#3a2300;padding:2px 10px;border-radius:6px;font-size:.72rem;font-weight:900;z-index:3}
+.fan{display:flex;align-items:center;justify-content:center}
+.fan-c{--w:76px;margin:0 -12px}
+.fan-c:nth-child(1){transform:rotate(-12deg) translateY(12px)}
+.fan-c:nth-child(2){--w:100px;z-index:2}
+.fan-c:nth-child(3){transform:rotate(12deg) translateY(12px)}
+.fan-c .slab{--w:84px}
+.pack-info{padding:12px 14px 14px}
+.pack-title{font-weight:800;margin:0 0 6px;font-size:1rem}
+.row-price{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.price{color:var(--gold);font-weight:900;font-size:1.4rem}
+.price small{font-size:.75rem;margin-left:2px}
+.topprize{font-size:.8rem;color:var(--sub)}
+.topprize b{color:#fff}
+.remain{font-size:.78rem;color:var(--sub);display:flex;justify-content:space-between;margin:8px 0 4px}
+.bar{height:8px;background:#0006;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--pink),var(--gold));transition:width .5s}
+.pull-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.pull{border:0;border-radius:12px;padding:10px;font-weight:900;font-size:1rem;color:#fff;background:linear-gradient(180deg,#ff5b9e,#e0186b);box-shadow:0 4px 0 #8e0d43}
+.pull.ten{background:linear-gradient(180deg,#ffdf5e,#f5a400);color:#3a2300;box-shadow:0 4px 0 #9a6500}
+.pull:active{transform:translateY(3px);box-shadow:none}
+.pull small{display:block;font-weight:700;font-size:.72rem;opacity:.9}
+.foot{margin-top:28px;text-align:center;color:#5d628c;font-size:.7rem}
+
+/* カード（オリジナルデザイン） */
+.tcard{position:relative;width:var(--w,200px);aspect-ratio:63/88;border-radius:calc(var(--w,200px)*.045);font-size:calc(var(--w,200px)/17);overflow:hidden;background:#ccc;box-shadow:0 6px 18px #0008;flex:none;color:#222;transition:transform .15s}
+.tc-frame{position:absolute;inset:0;padding:5.5%;display:flex;flex-direction:column;gap:3%;background:var(--frame)}
+.r-C{--frame:linear-gradient(160deg,#d9dde3,#aab1bb)}
+.r-R{--frame:linear-gradient(160deg,#9fd6ff,#4f8fd6)}
+.r-SR{--frame:linear-gradient(160deg,#f2f2f2,#9ea7b3 40%,#f8f8f8 60%,#8a93a0)}
+.r-UR{--frame:linear-gradient(160deg,#fff3b0,#e0a800 40%,#fff1a1 60%,#b37c00)}
+.r-SEC{--frame:linear-gradient(135deg,#ff9ad5,#ffe17a,#8af7c8,#86b6ff,#d59aff)}
+.tc-head{display:flex;justify-content:space-between;align-items:baseline;gap:.3em;font-weight:900;background:#fffa;border-radius:.4em;padding:.1em .45em}
+.tc-name{font-size:1.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-hp{font-size:.8em;color:#c0262d;white-space:nowrap}
+.tc-art{flex:0 0 46%;border-radius:.3em;border:.18em solid #fff9;display:flex;align-items:center;justify-content:center;font-size:4.2em;background:var(--art);overflow:hidden}
+.tc-art img{width:100%;height:100%;object-fit:cover}
+.tc-text{flex:1;background:#fffc;border-radius:.4em;padding:.4em .55em;font-size:.66em;line-height:1.35;overflow:hidden}
+.tc-text b{display:flex;justify-content:space-between;gap:.5em}
+.tc-flavor{margin-top:.3em;color:#555;font-size:.92em}
+.tc-foot{display:flex;justify-content:space-between;font-size:.6em;font-weight:800;color:#333}
+.tc-rar{background:#222;color:#fff;border-radius:.3em;padding:0 .4em}
+.r-SEC .tc-rar{background:linear-gradient(90deg,#ff3d8b,#ffb800,#22d3ee)}
+.r-UR .tc-rar{background:#b37c00}
+.tc-full{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tc-holo{position:absolute;inset:0;pointer-events:none;mix-blend-mode:color-dodge;opacity:0;background:linear-gradient(115deg,transparent 20%,#ff00c870 35%,#00ffe070 45%,#ffe60070 55%,transparent 70%);background-size:250% 250%;animation:holo 4s ease-in-out infinite alternate}
+.r-SR .tc-holo{opacity:.35}.r-UR .tc-holo{opacity:.5}.r-SEC .tc-holo{opacity:.7}
+.tc-glare{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--gx,30%) var(--gy,20%),#ffffff66,transparent 45%);mix-blend-mode:overlay;opacity:0}
+.r-SR .tc-glare,.r-UR .tc-glare,.r-SEC .tc-glare{opacity:1}
+@keyframes holo{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+.tback{width:100%;height:100%;border-radius:calc(var(--w,200px)*.045);border:calc(var(--w,200px)*.045) solid #0f1d5c;background:radial-gradient(circle,#ffe27a 0 11%,#e0a800 12% 15%,transparent 16%),repeating-linear-gradient(45deg,#2643b8 0 8px,#203a9f 8px 16px);box-shadow:0 6px 18px #0008;display:flex;align-items:center;justify-content:center;color:#1b2a7a;font-weight:900;font-size:calc(var(--w,200px)/9)}
+
+/* 鑑定ケース */
+.slab{--sw:var(--w,200px);width:var(--sw);padding:calc(var(--sw)*.05);border-radius:calc(var(--sw)*.05);background:linear-gradient(135deg,#ffffff38,#ffffff10 40%,#ffffff2a);border:2px solid #ffffff70;box-shadow:0 10px 30px #000a,inset 0 0 12px #fff3;position:relative;flex:none}
+.slab::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 35%,#ffffff40 45%,transparent 55%);background-size:300% 100%;animation:shine 4s linear infinite;pointer-events:none}
+.slab-label{background:#fff;color:#111;border:calc(var(--sw)*.012) solid #c8102e;border-radius:calc(var(--sw)*.02);padding:calc(var(--sw)*.025) calc(var(--sw)*.035);display:grid;grid-template-columns:1fr auto;gap:0 .4em;font-size:calc(var(--sw)/24);font-weight:800;line-height:1.25;margin-bottom:calc(var(--sw)*.04)}
+.sl-name{font-size:1.15em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-r{text-align:right}
+.sl-g{font-size:2.2em;line-height:1;font-weight:900}
+.sl-cert{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;color:#c8102e;font-size:.85em;margin-top:.2em}
+.sl-bar{height:1.1em;width:42%;background:repeating-linear-gradient(90deg,#111 0 1px,transparent 1px 3px,#111 3px 5px,transparent 5px 6px)}
+.slab-win{--w:calc(var(--sw) * .9);display:flex;justify-content:center}
+.slab-win .tcard{box-shadow:0 2px 6px #0006}
+
+/* 演出ステージ */
+.stage{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 45%,#1c2350,#05060f 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;padding:16px}
+.stage.dark{background:#000}
+.rays{position:absolute;left:50%;top:45%;width:240vmax;height:240vmax;margin:-120vmax 0 0 -120vmax;opacity:0;transition:opacity .6s;animation:spin 14s linear infinite;pointer-events:none}
+.stage.gold .rays{opacity:1;background:repeating-conic-gradient(#ffd23f40 0 6deg,transparent 6deg 18deg)}
+.stage.rainbow .rays{opacity:1;background:repeating-conic-gradient(#ff3d8b55 0 5deg,transparent 5deg 12deg,#22d3ee55 12deg 17deg,transparent 17deg 24deg,#ffd23f55 24deg 29deg,transparent 29deg 36deg);animation:spin 7s linear infinite,hue 2s linear infinite}
+.stage.gold{background:radial-gradient(circle at 50% 45%,#5a4100,#0d0800 70%)}
+.stage.rainbow{background:radial-gradient(circle at 50% 45%,#3a1658,#05060f 70%)}
+.stage.beat{animation:beat .45s}
+.stage.quake{animation:quake .4s}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+@keyframes beat{0%,100%{transform:scale(1)}25%{transform:scale(1.05)}50%{transform:scale(1)}70%{transform:scale(1.03)}}
+@keyframes quake{0%,100%{transform:translate(0)}20%{transform:translate(-10px,6px)}40%{transform:translate(9px,-7px)}60%{transform:translate(-6px,-4px)}80%{transform:translate(5px,5px)}}
+.stage-msg{position:relative;z-index:3;font-size:clamp(1.5rem,7.5vw,2.8rem);font-weight:900;text-align:center;min-height:1.4em;text-shadow:0 0 12px #000,0 3px 0 #000;margin-bottom:16px;line-height:1.2}
+.stage-msg.pop{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+.stage-msg.rainbow{background:linear-gradient(90deg,#ff3d8b,#ffd23f,#5ce07a,#22d3ee,#a78bfa,#ff3d8b);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 3px 0 #000);animation:pop .45s cubic-bezier(.2,1.6,.4,1),slide 1.2s linear infinite}
+.stage-msg.goldt{color:var(--gold)}
+@keyframes pop{0%{transform:scale(.3);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes slide{to{background-position:200% 0}}
+@keyframes shine{0%{background-position:150% 0}100%{background-position:-50% 0}}
+.stage-body{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;max-width:100%;max-height:calc(100% - 4em)}
+.skip{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:6;background:#0008;color:#fff;border:1px solid #fff4;border-radius:999px;padding:4px 12px;font-size:.8rem}
+.tap-hint{position:absolute;bottom:max(7vh,28px);z-index:4;font-weight:900;letter-spacing:.08em;animation:blink 1s infinite;text-shadow:0 2px 0 #000;pointer-events:none}
+@keyframes blink{50%{opacity:.3}}
+
+/* パック */
+.pack{position:relative;width:min(54vw,220px);aspect-ratio:5/8;transition:filter .4s}
+.pack-body{position:absolute;inset:12% 0 0 0;border-radius:6px 6px 12px 12px;background:linear-gradient(160deg,#3a4bd8,#16206b);border:3px solid #ffffff30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;box-shadow:0 0 30px #0008;overflow:hidden}
+.pack-top{position:absolute;left:0;right:0;top:0;height:13%;background:linear-gradient(160deg,#4b5cf0,#1d2a8a);border-radius:6px 6px 0 0;border-bottom:2px dashed #fff6;transition:transform .5s,opacity .5s}
+.pack-logo{font-weight:900;font-size:clamp(1rem,5.5vw,1.4rem);color:#fff;text-shadow:0 2px 0 #0008;position:relative}
+.pack-sub{font-size:.75rem;color:var(--gold);font-weight:800;position:relative;text-align:center;padding:0 8px}
+.pack-star{font-size:3rem;position:relative}
+.pack-shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,#fff5 45%,transparent 60%);background-size:300% 100%;animation:shine 2s linear infinite}
+.pack.gold .pack-body,.pack.gold .pack-top{background:linear-gradient(160deg,#fff1a1,#e0a800 45%,#fff3b0 60%,#b37c00)}
+.pack.gold .pack-logo{color:#4a2c00;text-shadow:none}
+.pack.gold .pack-sub{color:#7a4a00}
+.pack.gold{filter:drop-shadow(0 0 25px #ffd23f)}
+.pack.rainbow .pack-body,.pack.rainbow .pack-top{background:linear-gradient(135deg,#ff9ad5,#ffe17a,#8af7c8,#86b6ff,#d59aff,#ff9ad5);background-size:300% 300%;animation:slide 1.2s linear infinite}
+.pack.rainbow .pack-logo{color:#3b1458;text-shadow:0 0 6px #fff}
+.pack.rainbow .pack-sub{color:#3b1458}
+.pack.rainbow{filter:drop-shadow(0 0 40px #fff) drop-shadow(0 0 20px #ff3d8b)}
+.pack.silver .pack-body,.pack.silver .pack-top{background:linear-gradient(160deg,#f2f2f2,#9ea7b3 40%,#f8f8f8 60%,#8a93a0)}
+.pack.silver .pack-logo{color:#333;text-shadow:none}
+.pack.shake{animation:shake .14s linear infinite}
+.pack.shake-hard{animation:shake .06s linear infinite}
+@keyframes shake{0%,100%{transform:translate(0,0) rotate(0)}25%{transform:translate(-3px,1px) rotate(-1.5deg)}50%{transform:translate(3px,-1px) rotate(1deg)}75%{transform:translate(-1px,2px) rotate(-.5deg)}}
+.pack.open .pack-top{transform:translate(45%,-170%) rotate(28deg);opacity:0}
+.pack.gone{transition:transform .5s,opacity .5s;transform:translateY(70%) scale(.85);opacity:0}
+
+/* 確定スタンプ・稲妻 */
+.stamp{position:absolute;z-index:5;left:50%;top:42%;width:min(42vw,170px);aspect-ratio:1;margin:calc(min(42vw,170px)/-2) 0 0 calc(min(42vw,170px)/-2);border-radius:50%;border:8px solid #ff2d55;color:#ff2d55;display:flex;align-items:center;justify-content:center;font-size:min(22vw,92px);font-weight:900;background:#fff;box-shadow:0 0 40px #ff2d55;animation:slam .35s cubic-bezier(.3,1.7,.5,1) forwards;pointer-events:none}
+.stamp.rb{border-color:#fff;color:#fff;background:linear-gradient(135deg,#ff3d8b,#ffb800,#22d3ee,#a78bfa);box-shadow:0 0 60px #fff;text-shadow:0 3px 0 #0006}
+.stamp.out{animation:fadeout .4s forwards}
+@keyframes slam{0%{transform:scale(4) rotate(-25deg);opacity:0}100%{transform:scale(1) rotate(-8deg);opacity:1}}
+@keyframes fadeout{to{transform:scale(1.4) rotate(-8deg);opacity:0}}
+.bolt{position:absolute;z-index:4;top:-5%;width:28vw;max-width:160px;height:65%;background:linear-gradient(180deg,#fff,#fff8a8);clip-path:polygon(55% 0,25% 45%,48% 45%,20% 100%,80% 38%,55% 38%,78% 0);filter:drop-shadow(0 0 18px #fff) drop-shadow(0 0 30px #7df);opacity:0;animation:bolt .5s forwards;pointer-events:none}
+@keyframes bolt{0%{opacity:0}10%{opacity:1}30%{opacity:.2}45%{opacity:1}100%{opacity:0}}
+
+/* めくり */
+.flip{width:var(--w);aspect-ratio:63/88;perspective:900px;position:relative;flex:none}
+.flip-inner{position:absolute;inset:0;transition:transform .55s;transform-style:preserve-3d}
+.flip.open .flip-inner{transform:rotateY(180deg)}
+.flip .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.flip .face.front{transform:rotateY(180deg)}
+.flip.glow .face.back{border-radius:calc(var(--w)*.045);animation:glow 1s ease-in-out infinite alternate}
+.flip.glow.rb .face.back{animation:glow-rb 1.2s linear infinite}
+@keyframes glow{from{box-shadow:0 0 20px 4px #ffd23f}to{box-shadow:0 0 60px 18px #ffd23f}}
+@keyframes glow-rb{0%{box-shadow:0 0 50px 14px #ff3d8b}33%{box-shadow:0 0 50px 14px #ffd23f}66%{box-shadow:0 0 50px 14px #22d3ee}100%{box-shadow:0 0 50px 14px #ff3d8b}}
+.reveal{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:560px;--w:min(17vw,92px)}
+.reveal.one{--w:min(58vw,250px)}
+.spot{display:flex;flex-direction:column;align-items:center;gap:12px;--w:min(62vw,270px)}
+.spot .flip{animation:rise .9s cubic-bezier(.2,1.2,.4,1)}
+@keyframes rise{from{transform:translateY(60vh) scale(.6);opacity:0}to{transform:none;opacity:1}}
+.spot-card{touch-action:none}
+.spot-card .slab{animation:drop .6s cubic-bezier(.2,1.5,.4,1)}
+@keyframes drop{from{transform:scale(1.5);opacity:0}to{transform:none;opacity:1}}
+.spot-info{text-align:center;display:grid;gap:8px;width:min(92vw,360px)}
+.spot-name{font-size:1.2rem;font-weight:900}
+.spot-price{font-size:.95rem;color:var(--sub)}
+.spot-price b{display:block;font-size:2rem;color:var(--gold);text-shadow:0 0 12px #ffd23f88;font-variant-numeric:tabular-nums}
+.spot-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grade-pop{position:absolute;z-index:5;right:-6px;top:-10px;background:linear-gradient(135deg,#ff2d55,#ff8a00);color:#fff;font-weight:900;border-radius:10px;padding:4px 10px;font-size:1.1rem;box-shadow:0 4px 12px #0008;animation:slam .4s cubic-bezier(.3,1.7,.5,1) forwards}
+
+.sbtn{border:0;border-radius:12px;padding:11px 12px;font-weight:900;color:#fff;background:linear-gradient(180deg,#ff5b9e,#e0186b);box-shadow:0 3px 0 #8e0d43}
+.sbtn.gold{background:linear-gradient(180deg,#ffdf5e,#f5a400);color:#3a2300;box-shadow:0 3px 0 #9a6500}
+.sbtn.ghost{background:#ffffff14;border:1px solid #ffffff40;box-shadow:none}
+.sbtn:disabled{opacity:.4}
+
+/* 結果 */
+.result{background:#0d0f1fe8;border:1px solid var(--line);border-radius:16px;padding:14px;width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 120px);overflow:auto}
+.res-grid{display:flex;flex-wrap:wrap;gap:10px 8px;justify-content:center;--w:min(26vw,104px)}
+.res-grid.one{--w:min(54vw,220px)}
+.res-item{display:flex;flex-direction:column;align-items:center;gap:4px}
+.res-meta{font-size:.72rem;font-weight:800;display:flex;gap:4px;align-items:center}
+.rb{padding:0 6px;border-radius:4px;background:var(--frame);color:#222;font-size:.68rem}
+.res-total{text-align:center;margin:12px 0 10px;color:var(--sub)}
+.res-total b{color:var(--gold);font-size:1.3rem}
+.res-actions{display:grid;gap:8px}
+
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:150}
+.flash.on{animation:flash .55s}
+@keyframes flash{0%{opacity:.95}100%{opacity:0}}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:140}
+
+/* モーダル */
+.modal{position:fixed;inset:0;z-index:160;background:#000b;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px 16px max(16px,env(safe-area-inset-bottom));width:min(560px,100%);max-height:90vh;overflow:auto;display:grid;gap:10px}
+.sheet h2{margin:0;font-size:1.1rem}
+.sheet label{display:grid;gap:4px;font-size:.85rem;color:var(--sub);font-weight:700}
+.sheet label.chk{display:flex;align-items:center;gap:8px;color:var(--ink)}
+.sheet input:not([type=checkbox]),.sheet select{width:100%;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+.note{font-size:.78rem;color:var(--sub);margin:0}
+.prev{display:flex;justify-content:center;gap:12px;padding:8px 0;--w:120px;align-items:center}
+.charge-opts{display:grid;gap:8px}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:200;background:#000d;border:1px solid #fff3;color:#fff;padding:10px 16px;border-radius:12px;font-size:.9rem;font-weight:700;max-width:calc(100vw - 32px);text-align:center;transition:opacity .3s}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo" id="logo">ORIPA★STAR</div>
+  <button class="icon-btn" id="muteBtn" aria-label="サウンド切替">🔊</button>
+  <div class="pts">🪙 <span id="pts">0</span>pt<button id="chargeBtn">＋チャージ</button></div>
+</header>
+<div class="ticker"><span id="ticker"></span></div>
+
+<main>
+  <h2 class="sec-title">🔥 開催中のオリパ</h2>
+  <div class="packs" id="packs"></div>
+  <p class="foot">ORIPA★STAR ／ ※ネタ用のジョークサイトです。ポイント・カード・価格はすべて架空です。</p>
+</main>
+
+<div id="stage" class="stage hidden">
+  <div class="rays"></div>
+  <button class="skip" id="skipBtn">スキップ ≫</button>
+  <div class="stage-msg" id="msg"></div>
+  <div class="stage-body" id="stageBody"></div>
+  <div class="tap-hint hidden" id="tapHint">TAP</div>
+</div>
+<div class="flash" id="flash"></div>
+<canvas id="fx"></canvas>
+
+<div id="admin" class="modal hidden">
+  <div class="sheet">
+    <h2>🤫 仕込み設定</h2>
+    <p class="note">ロゴを5回連続タップで開きます。設定と画像はこの端末のブラウザ内だけに保存され、どこにも送信されません。</p>
+    <label>抽選モード
+      <select id="aMode">
+        <option value="random">通常（ランダム）</option>
+        <option value="next">次の1回だけ大当たり</option>
+        <option value="always">毎回大当たり</option>
+      </select>
+    </label>
+    <label class="chk"><input type="checkbox" id="aFake"> ドキドキ前振り（一度ハズレっぽく静かになってから逆転）</label>
+    <label>大当たりカード名<input id="aName" maxlength="20"></label>
+    <div class="two">
+      <label>レアリティ表記<input id="aRar" maxlength="5"></label>
+      <label>参考価格（円）<input id="aPrice" type="number" min="0" step="10000" inputmode="numeric"></label>
+    </div>
+    <label class="chk"><input type="checkbox" id="aSlab"> 鑑定ケースに入れて表示</label>
+    <div class="two">
+      <label>鑑定会社名<input id="aGrader" maxlength="12"></label>
+      <label>グレード<input id="aGrade" maxlength="4"></label>
+    </div>
+    <label>鑑定ラベル1行目（年・シリーズ名など）<input id="aSet" maxlength="30"></label>
+    <label>カード画像（任意・端末内のみ）<input type="file" id="aImg" accept="image/*"></label>
+    <div class="two">
+      <label>画像の使い方
+        <select id="aImgMode">
+          <option value="full">カード全体として表示</option>
+          <option value="art">イラスト枠に表示</option>
+        </select>
+      </label>
+      <button class="sbtn ghost" id="aImgDel" type="button">画像を削除</button>
+    </div>
+    <div class="prev" id="aPrev"></div>
+    <label>所持ポイント<input id="aPts" type="number" min="0" step="1000" inputmode="numeric"></label>
+    <button class="sbtn" id="aClose" type="button">閉じる</button>
+  </div>
+</div>
+
+<div id="charge" class="modal hidden">
+  <div class="sheet">
+    <h2>🪙 ポイントチャージ</h2>
+    <div class="charge-opts" id="chargeOpts"></div>
+    <button class="sbtn ghost" id="chargeClose" type="button">閉じる</button>
+  </div>
+</div>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const fmt = n => Number(n || 0).toLocaleString('ja-JP');
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const round2 = v => { const m = 10 ** Math.max(1, Math.floor(Math.log10(v)) - 1); return Math.round(v / m) * m; };
+const LV = { C: 0, R: 1, SR: 2, UR: 3 };
+const lv = c => c.prank ? 4 : LV[c.rar];
+
+// 設定（端末内のみ）
+const DEF = { mode: 'random', fake: true, name: 'ギンガリュウ', rarity: 'SEC', price: 1280000, slab: true, grader: 'GRADED', grade: '10', set: '2026 ORIPA★STAR', imgMode: 'full', points: 12000 };
+let cfg = { ...DEF };
+let img = '';
+try { cfg = { ...DEF, ...JSON.parse(localStorage.getItem('oripa-cfg') || '{}') }; } catch (e) {}
+try { img = localStorage.getItem('oripa-img') || ''; } catch (e) {}
+const save = () => { try { localStorage.setItem('oripa-cfg', JSON.stringify(cfg)); } catch (e) {} };
+
+// オリジナルのカードプール
+const POOL = {
+  C: [['モフリス', '🐿️'], ['ツボミン', '🌱'], ['ミズタマ', '💧'], ['ヒノコ', '🔥'], ['イワゴン', '🪨'], ['ポヨン', '🫧'], ['ネムネコ', '🐱'], ['ドングリン', '🌰'], ['キノコロ', '🍄'], ['ペタガエル', '🐸']],
+  R: [['ピリネコ', '⚡'], ['コオリドリ', '🐧'], ['ヨルフクロ', '🦉'], ['サンドワニ', '🐊'], ['カゼイタチ', '🌪️']],
+  SR: [['ホムラギツネ', '🦊'], ['ウミノヌシ', '🐋'], ['ライジンオー', '🌩️']],
+  UR: [['ドラグオン', '🐉'], ['キンノタテガミ', '🦁'], ['ヒカリノトリ', '🦅']],
+};
+const PRICE = { C: [30, 300], R: [300, 2000], SR: [3000, 30000], UR: [40000, 250000] };
+const HP = { C: [40, 90], R: [90, 140], SR: [150, 220], UR: [230, 330] };
+const ATK = ['ころころアタック', 'ぴかっとビーム', 'がぶりんちょ', 'ねむねむパンチ', 'しっぽビンタ', 'ぐるぐるダイブ', 'メテオストライク', 'ドラゴンバースト'];
+const FLAVOR = ['もりの おくで ひっそり くらしている。', 'きげんが いいと しっぽが ひかる。', 'よるに なると ほしを かぞえている。', 'ひとなつっこいが おこると こわい。'];
+
+function makeCard(rar) {
+  const [name, emoji] = pick(POOL[rar]);
+  const n = 1 + Math.floor(Math.random() * 99);
+  return {
+    rar, name, emoji,
+    hp: Math.round(rand(...HP[rar]) / 10) * 10,
+    price: round2(rand(...PRICE[rar])),
+    no: String(n).padStart(3, '0') + '/100',
+    atk: [[pick(ATK), Math.round(rand(1, 4 + LV[rar] * 4)) * 10]],
+    flavor: pick(FLAVOR),
+    hue: Math.floor(rand(0, 360)),
+  };
+}
+function prankCard() {
+  return {
+    rar: cfg.rarity || 'SEC', name: cfg.name || 'ギンガリュウ', emoji: '🌌', hp: 340,
+    price: Math.max(0, +cfg.price || 0), no: '112/100',
+    atk: [['ギャラクシーノヴァ', 300]], flavor: 'ほしぞらを わたる でんせつの りゅう。', hue: 270,
+    img, imgMode: cfg.imgMode, prank: true,
+  };
+}
+
+function cardHTML(c) {
+  const full = c.img && c.imgMode === 'full';
+  const rcls = c.prank ? 'SEC' : c.rar;
+  const body = full ? `<img class="tc-full" src="${c.img}" alt="">` : `
+    <div class="tc-frame">
+      <div class="tc-head"><span class="tc-name">${esc(c.name)}</span><span class="tc-hp">HP${c.hp}</span></div>
+      <div class="tc-art" style="--art:radial-gradient(circle at 50% 40%,hsl(${c.hue} 90% 80%),hsl(${c.hue} 70% 32%))">${c.img ? `<img src="${c.img}" alt="">` : esc(c.emoji)}</div>
+      <div class="tc-text">${c.atk.map(([n, d]) => `<b><span>${esc(n)}</span><span>${d}</span></b>`).join('')}<div class="tc-flavor">${esc(c.flavor)}</div></div>
+      <div class="tc-foot"><span>${c.no}</span><span class="tc-rar">${esc(c.rar)}</span></div>
+    </div>`;
+  return `<div class="tcard r-${rcls}">${body}<div class="tc-holo"></div><div class="tc-glare"></div></div>`;
+}
+let certNo = String(Math.floor(rand(10000000, 99999999)));
+function slabHTML(c) {
+  return `<div class="slab">
+    <div class="slab-label">
+      <div class="sl-l"><div>${esc(cfg.set)}</div><div class="sl-name">${esc(c.name)}</div><div>#${c.no.split('/')[0]} ${esc(c.rar)}</div></div>
+      <div class="sl-r"><div>GEM MT</div><div class="sl-g">${esc(cfg.grade)}</div></div>
+      <div class="sl-cert"><span>${esc(cfg.grader)} ${certNo}</span><span class="sl-bar"></span></div>
+    </div>
+    <div class="slab-win">${cardHTML(c)}</div>
+  </div>`;
+}
+const showCard = c => (c.prank && cfg.slab) ? slabHTML(c) : cardHTML(c);
+const flipHTML = (c, cls = '') => `<div class="flip ${cls}"><div class="flip-inner"><div class="face back"><div class="tback">★</div></div><div class="face front">${cardHTML(c)}</div></div></div>`;
+
+function tilt(root) {
+  root.querySelectorAll('.tcard').forEach(card => {
+    const holo = card.querySelector('.tc-holo');
+    const move = e => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      card.style.transform = `perspective(600px) rotateY(${(x - .5) * 26}deg) rotateX(${(.5 - y) * 26}deg)`;
+      holo.style.animation = 'none';
+      holo.style.backgroundPosition = `${x * 100}% ${y * 100}%`;
+      card.style.setProperty('--gx', x * 100 + '%');
+      card.style.setProperty('--gy', y * 100 + '%');
+    };
+    const leave = () => { card.style.transform = ''; holo.style.animation = ''; };
+    card.addEventListener('pointermove', move);
+    card.addEventListener('pointerleave', leave);
+    card.addEventListener('pointerup', leave);
+  });
+}
+
+// パック
+const PACKS = [
+  { title: '【残りわずか】超激アツ！SEC確定ラストワン付きオリパ', short: '超激アツSECオリパ', price: 1000, total: 5000, left: 87, label: '🔥 人気No.1', bg: 'linear-gradient(135deg,#3b0a5c,#a3135f 55%,#ff8a00)', hero: true,
+    odds: { SEC: .002, UR: .01, SR: .06, R: .25 } },
+  { title: 'UR確率3倍！ドラゴン祭りオリパ', short: 'ドラゴン祭り', price: 500, total: 3000, left: 1342, label: '⚡ 確率UP', bg: 'linear-gradient(135deg,#06244f,#0b6bbf 60%,#22d3ee)',
+    odds: { UR: .015, SR: .08, R: .3 } },
+  { title: 'はじめての方に！100ptお試しオリパ', short: 'お試しオリパ', price: 100, total: 10000, left: 6120, label: '🔰 お試し', bg: 'linear-gradient(135deg,#123d1f,#2f9e44 60%,#a3e635)',
+    odds: { UR: .002, SR: .03, R: .2 } },
+];
+PACKS.forEach(p => { p.feature = p.hero ? [makeCard('UR'), makeCard('UR')] : [makeCard('SR'), makeCard('UR'), makeCard('SR')]; });
+function rollCard(p) {
+  const r = Math.random(); let acc = 0;
+  for (const [k, v] of Object.entries(p.odds)) { acc += v; if (r < acc) return k === 'SEC' ? prankCard() : makeCard(k); }
+  return makeCard('C');
+}
+function renderPacks() {
+  $('#packs').innerHTML = PACKS.map((p, i) => {
+    const cards = p.hero ? [p.feature[0], prankCard(), p.feature[1]] : p.feature;
+    const top = p.hero ? prankCard().price : Math.max(...p.feature.map(c => c.price));
+    return `<article class="pack-card">
+      <div class="banner" style="background:${p.bg}">
+        <span class="label">${p.label}</span>
+        <div class="fan">${cards.map(c => `<div class="fan-c">${showCard(c)}</div>`).join('')}</div>
+        ${p.hero ? '<span class="lastone">ラストワン賞あり</span>' : ''}
+      </div>
+      <div class="pack-info">
+        <h3 class="pack-title">${p.title}</h3>
+        <div class="row-price"><span class="price">${fmt(p.price)}<small>pt/回</small></span><span class="topprize">最高 <b>¥${fmt(top)}</b> 相当</span></div>
+        <div class="remain"><span>残り <span id="left${i}">${fmt(p.left)}</span> / ${fmt(p.total)}口</span><span id="pct${i}">${Math.ceil(p.left / p.total * 100)}%</span></div>
+        <div class="bar"><i id="bar${i}" style="width:${p.left / p.total * 100}%"></i></div>
+        <div class="pull-row">
+          <button class="pull" data-p="${i}" data-n="1">1回引く<small>${fmt(p.price)}pt</small></button>
+          <button class="pull ten" data-p="${i}" data-n="10">10連<small>${fmt(p.price * 10)}pt</small></button>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+}
+function updateLeft(i) {
+  const p = PACKS[i];
+  $('#left' + i).textContent = fmt(p.left);
+  $('#pct' + i).textContent = Math.ceil(p.left / p.total * 100) + '%';
+  $('#bar' + i).style.width = p.left / p.total * 100 + '%';
+}
+setInterval(() => { const i = Math.floor(Math.random() * PACKS.length); const p = PACKS[i]; if (p.left > 12) { p.left -= 1 + Math.floor(Math.random() * 3); updateLeft(i); } }, 6000);
+
+function renderTicker() {
+  const heads = ['た', 'ゆ', 'け', 'み', 'S', 'K', 'ひ', 'あ', 'り', 'M'];
+  const items = [];
+  for (let i = 0; i < 8; i++) {
+    const c = i % 3 === 0 ? prankCard() : makeCard(pick(['UR', 'SR', 'UR']));
+    items.push(`🎉 ${pick(heads)}***さんが 『${c.name}』${c.prank && cfg.slab ? ` ${cfg.grader}${cfg.grade}` : ''} ${c.rar} を獲得！`);
+  }
+  $('#ticker').textContent = items.join('　　　');
+}
+const renderPts = () => { $('#pts').textContent = fmt(cfg.points); };
+function renderAll() { renderPacks(); renderTicker(); renderPts(); }
+
+// サウンド（WebAudio）
+let AC = null, muted = false;
+function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+function tone(f, d, { type = 'sine', vol = .2, at = 0, slide } = {}) {
+  if (muted) return;
+  try {
+    const a = ac(), t = a.currentTime + at, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + .05);
+  } catch (e) {}
+}
+const sfx = {
+  rumble: () => tone(70, 1.4, { type: 'sawtooth', vol: .05, slide: 180 }),
+  thump: () => { tone(65, .2, { vol: .7 }); tone(55, .25, { vol: .6, at: .2 }); },
+  chance: () => { tone(300, .6, { type: 'square', vol: .07, slide: 1200 }); tone(600, .4, { type: 'triangle', vol: .08, at: .5 }); },
+  rainbow: () => { [523, 659, 784, 1047, 1319, 1568].forEach((f, i) => tone(f, .25, { type: 'square', vol: .06, at: i * .07 })); tone(2093, .8, { type: 'triangle', vol: .08, at: .45 }); },
+  thunder: () => { tone(1800, .5, { type: 'sawtooth', vol: .06, slide: 60 }); tone(50, .8, { type: 'square', vol: .12, at: .05, slide: 30 }); },
+  stamp: () => { tone(90, .3, { type: 'square', vol: .25, slide: 40 }); },
+  tear: () => tone(1400, .2, { type: 'sawtooth', vol: .05, slide: 250 }),
+  flip: l => tone(l >= 2 ? 990 : 520, .08, { type: 'triangle', vol: .1 }),
+  fanfare: () => {
+    const n = [[523, .15], [523, .15], [523, .15], [523, .45], [415, .45], [466, .45], [523, .3], [466, .15], [523, 1.2]];
+    let t = 0; n.forEach(([f, d]) => { tone(f, d, { type: 'square', vol: .07, at: t }); tone(f * 2, d, { type: 'triangle', vol: .04, at: t }); t += d * .9; });
+  },
+  coin: () => { tone(988, .08, { type: 'square', vol: .06 }); tone(1319, .3, { type: 'square', vol: .06, at: .08 }); },
+};
+const vib = p => { try { if (navigator.vibrate && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate(p); } catch (e) {} };
+$('#muteBtn').onclick = () => { muted = !muted; $('#muteBtn').textContent = muted ? '🔇' : '🔊'; };
+
+// 紙吹雪
+const fx = $('#fx'), ctx = fx.getContext('2d');
+let parts = [], raf = 0;
+function sizeFx() { const d = devicePixelRatio || 1; fx.width = innerWidth * d; fx.height = innerHeight * d; ctx.setTransform(d, 0, 0, d, 0, 0); }
+addEventListener('resize', sizeFx); sizeFx();
+function confetti(n = 160, y = .45) {
+  const cols = ['#ff3d8b', '#ffd23f', '#22d3ee', '#5ce07a', '#a78bfa', '#ffffff'];
+  for (let i = 0; i < n; i++) parts.push({ x: innerWidth / 2 + rand(-40, 40), y: innerHeight * y, vx: rand(-10, 10), vy: rand(-17, -5), s: rand(6, 11), r: rand(0, 6), vr: rand(-.3, .3), c: pick(cols) });
+  if (!raf) raf = requestAnimationFrame(loop);
+}
+function loop() {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter(p => p.y < innerHeight + 30);
+  for (const p of parts) {
+    p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore();
+  }
+  raf = parts.length ? requestAnimationFrame(loop) : 0;
+}
+
+// 演出ステージ
+const stage = $('#stage'), msg = $('#msg'), body = $('#stageBody'), tapHint = $('#tapHint');
+let skipped = false, waiters = [], busy = false;
+class Skip extends Error {}
+const chk = () => { if (skipped) throw new Skip(); };
+const sleep = ms => new Promise(r => { const t = setTimeout(r, ms); waiters.push(() => { clearTimeout(t); r(); }); });
+function waitTap(hint) {
+  tapHint.textContent = hint; tapHint.classList.remove('hidden');
+  return new Promise(r => {
+    const done = () => { stage.removeEventListener('click', done); tapHint.classList.add('hidden'); r(); };
+    stage.addEventListener('click', done); waiters.push(done);
+  });
+}
+$('#skipBtn').onclick = e => { e.stopPropagation(); skipped = true; const w = waiters; waiters = []; w.forEach(f => f()); };
+function setMsg(t, cls = '') { msg.className = 'stage-msg'; void msg.offsetWidth; msg.className = 'stage-msg ' + (t ? (cls || 'pop') : ''); msg.textContent = t; }
+function flash() { const f = $('#flash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+function fxClass(c) { stage.classList.remove(c); void stage.offsetWidth; stage.classList.add(c); }
+function bolts() {
+  for (let i = 0; i < 3; i++) {
+    const b = document.createElement('div'); b.className = 'bolt';
+    b.style.left = rand(0, 75) + '%'; b.style.animationDelay = i * .12 + 's';
+    if (Math.random() < .5) b.style.transform = 'scaleX(-1)';
+    stage.appendChild(b); setTimeout(() => b.remove(), 1200);
+  }
+}
+async function stamp(text, rb) {
+  const s = document.createElement('div'); s.className = 'stamp' + (rb ? ' rb' : ''); s.textContent = text;
+  stage.appendChild(s); sfx.stamp(); fxClass('quake'); vib(150);
+  try { await sleep(1100); } finally { s.classList.add('out'); setTimeout(() => s.remove(), 450); }
+}
+
+async function draw(pi, n) {
+  if (busy) return;
+  const p = PACKS[pi], cost = p.price * n;
+  if (cfg.points < cost) { toast('ポイントが不足しています'); openCharge(); return; }
+  busy = true;
+  ac();
+  cfg.points -= cost; renderPts();
+  p.left = Math.max(1, p.left - n); updateLeft(pi);
+  const cards = Array.from({ length: n }, () => rollCard(p));
+  if (cfg.mode !== 'random') { cards[n - 1] = prankCard(); if (cfg.mode === 'next') cfg.mode = 'random'; }
+  // 一番いいカードを最後に回す
+  let best = 0; cards.forEach((c, i) => { if (lv(c) > lv(cards[best])) best = i; });
+  cards.push(cards.splice(best, 1)[0]);
+  save();
+  await runStage(cards, p, pi, n);
+}
+
+async function runStage(cards, p, pi, n) {
+  skipped = false; waiters = [];
+  const top = Math.max(...cards.map(lv));
+  const special = top >= 3;
+  stage.className = 'stage'; document.body.classList.add('lock');
+  $('#skipBtn').classList.remove('hidden');
+  body.innerHTML = `<div class="pack" id="pk"><div class="pack-top"></div><div class="pack-body"><div class="pack-shine"></div><div class="pack-star">⭐</div><div class="pack-logo">ORIPA★STAR</div><div class="pack-sub">${esc(p.short)}</div></div></div>`;
+  const pk = $('#pk');
+  try {
+    setMsg('抽選中…'); pk.classList.add('shake'); sfx.rumble();
+    await sleep(1600); chk();
+    if (special) {
+      if (cfg.fake) {
+        pk.classList.remove('shake'); setMsg('');
+        await sleep(900); chk();
+        setMsg('……'); stage.classList.add('dark');
+        await sleep(1100); chk();
+        for (let i = 0; i < 3; i++) { fxClass('beat'); sfx.thump(); vib(80); await sleep(650); chk(); }
+        stage.classList.remove('dark');
+      }
+      flash(); bolts(); sfx.thunder(); vib([100, 50, 200]);
+      pk.className = 'pack gold shake-hard'; stage.classList.add('gold');
+      setMsg('激アツ！！', 'pop goldt'); sfx.chance();
+      await sleep(1500); chk();
+      if (top >= 4) {
+        flash(); bolts(); sfx.thunder();
+        await sleep(250); chk();
+        pk.className = 'pack rainbow shake-hard'; stage.classList.remove('gold'); stage.classList.add('rainbow');
+        sfx.rainbow(); vib([100, 50, 100, 50, 300]);
+        setMsg('虹色確定!!!', 'rainbow');
+        await sleep(900); chk();
+        await stamp('確', true); chk();
+        setMsg(`${cfg.rarity || 'SEC'} 確定!!!`, 'rainbow');
+        await sleep(900); chk();
+      } else {
+        await stamp('確', false); chk();
+      }
+    } else if (top === 2) {
+      pk.classList.add('silver'); setMsg('チャンス！'); sfx.chance();
+      await sleep(900); chk();
+    }
+    pk.classList.remove('shake', 'shake-hard');
+    setMsg('');
+    await waitTap('▼ タップして開封 ▼'); chk();
+    pk.classList.add('open'); sfx.tear(); vib(40);
+    await sleep(450); chk();
+    pk.classList.add('gone');
+    await sleep(450); chk();
+    setMsg('');
+
+    const normal = special ? cards.slice(0, -1) : cards;
+    if (normal.length) {
+      body.innerHTML = `<div class="reveal ${n === 1 ? 'one' : ''}" id="rv">${cards.map((c, i) => flipHTML(c, special && i === cards.length - 1 ? 'glow' + (top >= 4 ? ' rb' : '') : '')).join('')}</div>`;
+      const els = [...body.querySelectorAll('.flip')];
+      for (let i = 0; i < normal.length; i++) { await sleep(n > 1 ? 160 : 300); chk(); els[i].classList.add('open'); sfx.flip(lv(normal[i])); }
+      await sleep(special ? 900 : 1000); chk();
+    }
+    if (special) await spotlight(cards[cards.length - 1], top);
+  } catch (e) {
+    if (!(e instanceof Skip)) throw e;
+  }
+  showResults(cards, pi, n, top);
+}
+
+async function spotlight(c, top) {
+  const rb = top >= 4;
+  body.innerHTML = `<div class="spot">
+    <div class="spot-card" id="spCard">${flipHTML(c, 'glow' + (rb ? ' rb' : ''))}</div>
+    <div class="spot-info hidden" id="spInfo">
+      <div class="spot-name">${esc(c.name)}</div>
+      <div class="spot-price">参考買取価格<b id="spPrice">¥0</b></div>
+      <div class="spot-actions"><button class="sbtn" data-a="ship">📦 発送申請</button><button class="sbtn gold" data-a="conv">🪙 ポイント交換</button></div>
+      <button class="sbtn ghost" data-a="next">結果一覧へ ≫</button>
+    </div>
+  </div>`;
+  setMsg(rb ? '✨ 伝説のカード出現 ✨' : '✨ 大当たり出現 ✨', rb ? 'rainbow' : 'pop goldt');
+  await waitTap('▼ タップしてめくる ▼'); chk();
+  const card = $('#spCard');
+  flash(); vib([200, 80, 300]);
+  card.querySelector('.flip').classList.remove('glow', 'rb');
+  card.querySelector('.flip').classList.add('open');
+  sfx.fanfare(); confetti(180);
+  setMsg(`🎊 ${c.rar} 大当たり 🎊`, rb ? 'rainbow' : 'pop goldt');
+  await sleep(700); chk();
+  confetti(120, .3);
+  tilt(card);
+  if (c.prank && cfg.slab) {
+    await sleep(1200); chk();
+    setMsg('鑑定結果は……', 'pop');
+    await sleep(1300); chk();
+    card.style.position = 'relative';
+    card.innerHTML = slabHTML(c) + `<div class="grade-pop">${esc(cfg.grader)} ${esc(cfg.grade)}</div>`;
+    flash(); sfx.stamp(); fxClass('quake'); confetti(140); sfx.rainbow(); vib([100, 60, 300]);
+    setMsg(`${cfg.grader}${cfg.grade} 🏆 最高評価！`, 'rainbow');
+    tilt(card);
+    await sleep(800); chk();
+  }
+  const info = $('#spInfo'); info.classList.remove('hidden');
+  $('#skipBtn').classList.add('hidden');
+  countUp($('#spPrice'), c.price);
+  await new Promise(r => {
+    info.onclick = e => {
+      const b = e.target.closest('[data-a]'); if (!b) return;
+      e.stopPropagation();
+      const a = b.dataset.a;
+      if (a === 'next') return r();
+      info.querySelectorAll('[data-a=ship],[data-a=conv]').forEach(x => x.disabled = true);
+      if (a === 'ship') toast('📦 発送申請を受け付けました。お届けまでお待ちください');
+      else { cfg.points += c.price; save(); renderPts(); sfx.coin(); toast(`🪙 ${fmt(c.price)}pt に交換しました`); }
+    };
+  });
+}
+
+function countUp(el, to) {
+  const t0 = performance.now(), dur = 1800;
+  const step = t => {
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+    el.textContent = '¥' + fmt(Math.round(to * e));
+    if (k < 1) requestAnimationFrame(step); else sfx.coin();
+  };
+  requestAnimationFrame(step);
+}
+
+function showResults(cards, pi, n, top) {
+  $('#skipBtn').classList.add('hidden'); tapHint.classList.add('hidden');
+  stage.className = 'stage' + (top >= 4 ? ' rainbow' : top === 3 ? ' gold' : '');
+  const total = cards.reduce((s, c) => s + c.price, 0);
+  const p = PACKS[pi];
+  setMsg(n > 1 ? `${n}連 結果` : '結果', 'pop');
+  body.innerHTML = `<div class="result">
+    <div class="res-grid ${n === 1 ? 'one' : ''}">${cards.map(c => `<div class="res-item">${showCard(c)}<div class="res-meta"><span class="rb r-${c.prank ? 'SEC' : c.rar}">${esc(c.rar)}</span>¥${fmt(c.price)}</div></div>`).join('')}</div>
+    <div class="res-total">合計参考価格 <b>¥${fmt(total)}</b></div>
+    <div class="res-actions">
+      <button class="sbtn" id="again">もう一度 ${n === 1 ? '1回' : n + '連'}（${fmt(p.price * n)}pt）</button>
+      <button class="sbtn ghost" id="closeStage">閉じる</button>
+    </div>
+  </div>`;
+  tilt(body);
+  $('#closeStage').onclick = e => { e.stopPropagation(); closeStage(); };
+  $('#again').onclick = e => { e.stopPropagation(); closeStage(); draw(pi, n); };
+  busy = false;
+}
+function closeStage() { stage.className = 'stage hidden'; body.innerHTML = ''; document.body.classList.remove('lock'); }
+
+$('#packs').addEventListener('click', e => {
+  const b = e.target.closest('.pull'); if (!b) return;
+  draw(+b.dataset.p, +b.dataset.n);
+});
+
+// トースト
+let toastT = 0;
+function toast(t) {
+  const el = $('#toast'); el.textContent = t; el.classList.remove('hidden');
+  clearTimeout(toastT); toastT = setTimeout(() => el.classList.add('hidden'), 2600);
+}
+
+// チャージ（架空）
+$('#chargeOpts').innerHTML = [1000, 5000, 10000, 50000].map(v => `<button class="sbtn ${v >= 10000 ? 'gold' : ''}" data-v="${v}">${fmt(v)}pt をチャージ</button>`).join('');
+function openCharge() { $('#charge').classList.remove('hidden'); }
+$('#chargeBtn').onclick = openCharge;
+$('#chargeClose').onclick = () => $('#charge').classList.add('hidden');
+$('#chargeOpts').onclick = e => {
+  const b = e.target.closest('[data-v]'); if (!b) return;
+  cfg.points += +b.dataset.v; save(); renderPts(); sfx.coin();
+  $('#charge').classList.add('hidden'); toast(`${fmt(b.dataset.v)}pt チャージしました`);
+};
+
+// 仕込み設定（ロゴ5連打）
+let taps = 0, tapT = 0;
+$('#logo').onclick = () => {
+  taps++; clearTimeout(tapT); tapT = setTimeout(() => taps = 0, 1500);
+  if (taps >= 5) { taps = 0; openAdmin(); }
+};
+const A = id => document.getElementById(id);
+function openAdmin() {
+  A('aMode').value = cfg.mode; A('aFake').checked = cfg.fake; A('aName').value = cfg.name;
+  A('aRar').value = cfg.rarity; A('aPrice').value = cfg.price; A('aSlab').checked = cfg.slab;
+  A('aGrader').value = cfg.grader; A('aGrade').value = cfg.grade; A('aSet').value = cfg.set; A('aImgMode').value = cfg.imgMode;
+  A('aPts').value = cfg.points;
+  renderPrev(); A('admin').classList.remove('hidden');
+}
+function renderPrev() { A('aPrev').innerHTML = showCard(prankCard()); tilt(A('aPrev')); }
+function readAdmin() {
+  cfg.mode = A('aMode').value; cfg.fake = A('aFake').checked;
+  cfg.name = A('aName').value.trim() || DEF.name; cfg.rarity = A('aRar').value.trim() || DEF.rarity;
+  cfg.price = Math.max(0, +A('aPrice').value || 0); cfg.slab = A('aSlab').checked;
+  cfg.grader = A('aGrader').value.trim() || DEF.grader; cfg.grade = A('aGrade').value.trim() || DEF.grade;
+  cfg.set = A('aSet').value.trim() || DEF.set;
+  cfg.imgMode = A('aImgMode').value; cfg.points = Math.max(0, +A('aPts').value || 0);
+  save(); renderPrev(); renderAll();
+}
+A('admin').addEventListener('change', e => { if (e.target.id !== 'aImg') readAdmin(); });
+A('admin').addEventListener('input', e => { if (e.target.tagName === 'INPUT' && e.target.type !== 'file' && e.target.type !== 'checkbox') readAdmin(); });
+A('aClose').onclick = () => { A('admin').classList.add('hidden'); toast(cfg.mode === 'random' ? '通常モードです' : '🤫 仕込み完了'); };
+A('aImgDel').onclick = () => { img = ''; try { localStorage.removeItem('oripa-img'); } catch (e) {} renderPrev(); renderAll(); };
+A('aImg').onchange = () => {
+  const f = A('aImg').files[0]; if (!f) return;
+  const url = URL.createObjectURL(f), im = new Image();
+  im.onload = () => {
+    const s = Math.min(1, 900 / Math.max(im.width, im.height));
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(im.width * s); cv.height = Math.round(im.height * s);
+    cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+    img = cv.toDataURL('image/jpeg', .9); URL.revokeObjectURL(url);
+    try { localStorage.setItem('oripa-img', img); } catch (e) { toast('画像を保存できませんでした（このページを開いている間は使えます）'); }
+    renderPrev(); renderAll();
+  };
+  im.onerror = () => toast('画像を読み込めませんでした');
+  im.src = url;
+};
+
+renderAll();
+</script>
+</body>
+</html>
